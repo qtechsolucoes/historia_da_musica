@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Sparkles, Swords } from 'lucide-react';
+import { BrainCircuit, Sparkles, Swords, ChevronLeft, ChevronRight } from 'lucide-react';
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
 
 const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, duel, onGenerateDuel, onDuelChange }) => {
     const [activeTab, setActiveTab] = useState('overview');
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [direction, setDirection] = useState(0);
 
     useEffect(() => {
         setActiveTab('overview');
+        setCurrentSlide(0);
     }, [period]);
+
 
     const tabs = [
         { id: 'overview', label: 'Visão Geral' },
@@ -73,25 +77,112 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'overview':
+            case 'overview': {
+                const slides = [
+                    {
+                        title: 'Contexto Histórico',
+                        text: period.historicalContext,
+                        image: period.overviewImages[0],
+                    },
+                    {
+                        title: 'Descrição Musical',
+                        text: period.description,
+                        image: period.overviewImages[1],
+                    }
+                ];
+                
+                const paginate = (newDirection) => {
+                    setDirection(newDirection);
+                    if (newDirection > 0) {
+                        setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+                    } else {
+                        setCurrentSlide((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+                    }
+                }
+                
+                const slideVariants = {
+                    enter: (direction) => ({
+                      x: direction > 0 ? 50 : -50,
+                      opacity: 0,
+                    }),
+                    center: {
+                      zIndex: 1,
+                      x: 0,
+                      opacity: 1,
+                      transition: { duration: 0.4, ease: [0.645, 0.045, 0.355, 1.000] }
+                    },
+                    exit: (direction) => ({
+                      zIndex: 0,
+                      x: direction < 0 ? 50 : -50,
+                      opacity: 0,
+                      transition: { duration: 0.2, ease: 'easeIn' }
+                    }),
+                };
+
+                const safeCurrentSlide = Math.max(0, Math.min(slides.length - 1, currentSlide));
+                const slide = slides[safeCurrentSlide];
+
                 return (
-                    <motion.section initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-5xl mx-auto">
+                    <div className="flex flex-col items-center">
                         <h2 className="text-4xl text-amber-300 mb-4 font-title">{period.name}</h2>
-                        <div className="grid md:grid-cols-3 gap-8">
-                            <div className="md:col-span-2">
-                                <h3 className="text-2xl text-amber-200 font-serif mb-2">Contexto Histórico</h3>
-                                <p className="text-stone-300 leading-relaxed font-serif">{period.historicalContext}</p>
-                                <h3 className="text-2xl text-amber-200 font-serif mt-6 mb-2">Descrição Musical</h3>
-                                <p className="text-stone-300 leading-relaxed font-serif italic">{period.description}</p>
-                            </div>
-                            <div className="space-y-4">
-                                {period.overviewImages && period.overviewImages.map((img, index) => (
-                                    <img key={index} src={img} alt={`${period.name} - Imagem ${index+1}`} className="w-full h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
-                                ))}
-                            </div>
+                        
+                        <div className="flex items-center justify-center w-full max-w-6xl">
+                            <button 
+                                onClick={() => paginate(-1)} 
+                                className="hidden md:flex items-center justify-center w-12 h-12 rounded-full bg-black/20 text-amber-300 hover:bg-black/40 transition-colors mx-4 flex-shrink-0"
+                            >
+                                <ChevronLeft size={32} />
+                            </button>
+
+                            <motion.section 
+                                className="relative bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg w-full overflow-hidden"
+                                style={{ minHeight: '400px' }}
+                            >
+                                <AnimatePresence initial={false} custom={direction}>
+                                    <motion.div
+                                        key={safeCurrentSlide}
+                                        variants={slideVariants}
+                                        custom={direction}
+                                        initial="enter"
+                                        animate="center"
+                                        exit="exit"
+                                        className="absolute w-full h-full top-0 left-0 p-6"
+                                    >
+                                        <div className="grid md:grid-cols-3 gap-8 items-center h-full">
+                                            <div className="md:col-span-2">
+                                                <h3 className="text-2xl text-amber-200 font-serif mb-2">{slide.title}</h3>
+                                                <p className="text-stone-300 leading-relaxed font-serif text-justify">{slide.text}</p>
+                                            </div>
+                                            <div className="hidden md:block">
+                                                <img src={slide.image} alt={slide.title} className="w-full h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </AnimatePresence>
+                            </motion.section>
+
+                            <button 
+                                onClick={() => paginate(1)} 
+                                className="hidden md:flex items-center justify-center w-12 h-12 rounded-full bg-black/20 text-amber-300 hover:bg-black/40 transition-colors mx-4 flex-shrink-0"
+                            >
+                                <ChevronRight size={32} />
+                            </button>
                         </div>
-                    </motion.section>
+
+                        <div className="flex justify-center items-center mt-4 w-full">
+                             <button onClick={() => paginate(-1)} className="p-2 rounded-full text-amber-300 md:hidden">
+                                <ChevronLeft size={24} />
+                            </button>
+                            <div className="flex-1 text-center text-xs text-stone-400">
+                                {safeCurrentSlide + 1} / {slides.length}
+                            </div>
+                            <button onClick={() => paginate(1)} className="p-2 rounded-full text-amber-300 md:hidden">
+                                <ChevronRight size={24} />
+                            </button>
+                        </div>
+                    </div>
                 );
+            }
             case 'composers': return renderGrid(period.composers, 'composer');
             case 'genres': return renderGrid(period.genresAndForms, 'genre');
             case 'styles': return renderGrid(period.stylesAndTechniques, 'style');
