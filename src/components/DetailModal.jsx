@@ -153,10 +153,26 @@ const DetailModal = ({ content, onClose }) => {
         case 'ensemble':
              title = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${data.name}`;
              details = (
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                   <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
-                   <p className="flex-1 text-stone-300 leading-relaxed">{data.description}</p>
-               </div>
+                <>
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50 mb-4 md:mb-0"/>
+                       <div className="flex-1">
+                          <p className="text-stone-300 leading-relaxed">{data.description}</p>
+                       </div>
+                   </div>
+                   {data.youtubeId && (
+                        <div className="aspect-w-16 aspect-h-9 mt-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
+                            <iframe 
+                                src={`https://www.youtube.com/embed/${data.youtubeId}`} 
+                                title="YouTube video player" 
+                                frameBorder="0" 
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                allowFullScreen 
+                                className="w-full h-full"
+                            ></iframe>
+                        </div>
+                   )}
+                </>
              );
              break;
         case 'work':
@@ -164,6 +180,7 @@ const DetailModal = ({ content, onClose }) => {
             details = (
                 <>
                     <p className="font-semibold text-amber-200 mb-4">Compositor: {data.composer} ({data.year})</p>
+                    {/* Linha corrigida com as classes originais do Tailwind */}
                     <div className="aspect-w-16 aspect-h-9 mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
                         <iframe src={`https://www.youtube.com/embed/${data.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full"></iframe>
                     </div>
