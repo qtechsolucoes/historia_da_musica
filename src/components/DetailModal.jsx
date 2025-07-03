@@ -7,9 +7,6 @@ import LoadingSpinner from './LoadingSpinner';
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 const DetailModal = ({ content, onClose }) => {
-    // ... cole todo o código do componente DetailModal aqui ...
-    // Começa com: const [generatedAnalysis, setGeneratedAnalysis] = useState('');
-    // E vai até o final do componente.
     const [generatedAnalysis, setGeneratedAnalysis] = useState('');
     const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
     const [chatHistory, setChatHistory] = useState([]);

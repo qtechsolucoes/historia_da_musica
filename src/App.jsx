@@ -122,7 +122,7 @@ Responda em português do Brasil.`;
             
             <header className="text-center p-4 bg-black/30 backdrop-blur-sm z-20 border-b-2 border-amber-900/50 flex-shrink-0">
                 <h1 className="text-3xl md:text-5xl font-title text-amber-300" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
-                    Crônicas Musicais
+                    Codex Historiæ Musicæ
                 </h1>
             </header>
 

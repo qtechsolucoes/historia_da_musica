@@ -6,7 +6,6 @@ import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
 
 const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, duel, onGenerateDuel, onDuelChange }) => {
-    // ... cole todo o código do componente MainContent aqui ...
     const [activeTab, setActiveTab] = useState('overview');
 
     useEffect(() => {
