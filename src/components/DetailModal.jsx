@@ -27,7 +27,6 @@ const DetailModal = ({ content, onClose }) => {
 
     const { type, data } = content;
 
-    // Objeto para traduzir os tipos para os títulos do modal
     const typeTranslations = {
         composer: 'Compositor',
         instrument: 'Instrumento',
@@ -37,7 +36,6 @@ const DetailModal = ({ content, onClose }) => {
         ensemble: 'Conjunto'
     };
 
-    // Gera o título usando o objeto de tradução
     const translatedType = typeTranslations[type] || type;
     const title = `${translatedType}: ${type === 'work' ? data.title : data.name}`;
     
@@ -112,8 +110,10 @@ const DetailModal = ({ content, onClose }) => {
                             <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
                             <div className="flex-1">
                                 <p className="font-semibold text-amber-200">{data.lifespan}</p>
-                                <div className="max-h-48 overflow-y-auto scrollbar-thin pr-2">
-                                    <p className="mt-2 text-stone-300 whitespace-pre-wrap text-justify">{data.bio}</p>
+                                <div className="max-h-48 overflow-y-auto scrollbar-thin pr-2 mt-2 text-stone-300 text-justify">
+                                    {(data.bio || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                    ))}
                                 </div>
                                 <h4 className="font-bold mt-4 text-amber-100 font-serif">Principais Obras:</h4>
                                 <ul className="list-disc list-inside text-stone-300 mt-1">
@@ -137,9 +137,11 @@ const DetailModal = ({ content, onClose }) => {
                                     <div className="h-64 bg-black/30 rounded-t-md border border-b-0 border-amber-900/50 p-4 overflow-y-auto flex flex-col space-y-2 scrollbar-thin">
                                         {chatHistory.map((msg, index) => (
                                             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                                <p className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg whitespace-pre-wrap text-justify ${msg.role === 'user' ? 'bg-amber-800/70 text-white' : 'bg-gray-700 text-stone-200'}`}>
-                                                    {msg.text}
-                                                </p>
+                                                <div className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg text-justify ${msg.role === 'user' ? 'bg-amber-800/70 text-white' : 'bg-gray-700 text-stone-200'}`}>
+                                                    {(msg.text || '').split('\n\n').map((paragraph, index) => (
+                                                        <p key={index} className="mb-1 last:mb-0">{paragraph}</p>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                         {isChatLoading && <div className="flex justify-start"><LoadingSpinner size="h-6 w-6"/></div>}
@@ -164,27 +166,17 @@ const DetailModal = ({ content, onClose }) => {
                 );
             case 'instrument':
             case 'ensemble':
+            case 'genre':
+            case 'style':
                  return (
-                    <>
-                        <div className="flex flex-col md:flex-row gap-6 items-start">
-                           <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
-                           <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2">
-                              <p className="text-stone-300 leading-relaxed whitespace-pre-wrap text-justify">{data.description}</p>
-                           </div>
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                       {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
+                       <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2 text-stone-300 leading-relaxed text-justify">
+                          {(data.description || '').split('\n\n').map((paragraph, index) => (
+                            <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                          ))}
                        </div>
-                       {data.youtubeId && (
-                            <div className="aspect-w-16 aspect-h-9 mt-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
-                                <iframe 
-                                    src={`https://www.youtube.com/embed/${data.youtubeId}`} 
-                                    title="YouTube video player" 
-                                    frameBorder="0" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                    allowFullScreen 
-                                    className="w-full h-full"
-                                ></iframe>
-                            </div>
-                       )}
-                    </>
+                   </div>
                  );
             case 'work':
                 return (
@@ -193,8 +185,10 @@ const DetailModal = ({ content, onClose }) => {
                         <div className="aspect-w-16 aspect-h-9 mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
                             <iframe src={`https://www.youtube.com/embed/${data.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full"></iframe>
                         </div>
-                        <div className="max-h-40 overflow-y-auto scrollbar-thin pr-2">
-                            <p className="text-stone-300 italic leading-relaxed mb-6 whitespace-pre-wrap text-justify">"{data.analysis}"</p>
+                        <div className="max-h-40 overflow-y-auto scrollbar-thin pr-2 text-stone-300 italic leading-relaxed mb-6 text-justify">
+                            {(data.analysis || '').split('\n\n').map((paragraph, index) => (
+                                <p key={index} className="mb-2 last:mb-0">"{paragraph}"</p>
+                            ))}
                         </div>
                         <div className="border-t border-amber-900/50 pt-4">
                             <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
@@ -205,23 +199,15 @@ const DetailModal = ({ content, onClose }) => {
                             {generatedAnalysis && (
                                 <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
                                     <h4 className="font-bold text-amber-200 font-serif mb-2">Análise da IA:</h4>
-                                    <p className="text-stone-300 whitespace-pre-wrap text-justify">{generatedAnalysis}</p>
+                                    <div className="text-stone-300 text-justify">
+                                        {(generatedAnalysis || '').split('\n\n').map((paragraph, index) => (
+                                            <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
                     </>
-                );
-            case 'genre':
-            case 'style':
-                return (
-                    <div className="flex flex-col md:flex-row gap-6 items-start">
-                        {data.image && (
-                           <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
-                        )}
-                        <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2">
-                            <p className="text-stone-300 leading-relaxed whitespace-pre-wrap text-justify">{data.description}</p>
-                        </div>
-                    </div>
                 );
             default: return null;
         }

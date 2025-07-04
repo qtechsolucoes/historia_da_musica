@@ -85,8 +85,10 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         <section className="mb-12">
                             <h3 className="text-3xl text-amber-200 font-serif mb-4">Contexto Histórico</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-2">
-                                    <p className="text-stone-300 leading-relaxed font-serif text-lg text-justify whitespace-pre-wrap">{period.historicalContext}</p>
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify">
+                                    {(period.historicalContext || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
+                                    ))}
                                 </div>
                                 <div className="md:col-span-1 space-y-6">
                                     {historicalImages.map((image, index) => (
@@ -104,8 +106,10 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         <section>
                             <h3 className="text-3xl text-amber-200 font-serif mb-4">Características Musicais</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-2">
-                                    <p className="text-stone-300 leading-relaxed font-serif text-lg text-justify whitespace-pre-wrap">{period.description}</p>
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify">
+                                    {(period.description || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
+                                    ))}
                                 </div>
                                 <div className="md:col-span-1 space-y-6">
                                     {musicalImages.map((image, index) => (
@@ -132,7 +136,11 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                 return (
                     <motion.section initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <h2 className="text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><BrainCircuit/> Desafio dos Mestres</h2>
-                        <p className="text-stone-300 mb-4 font-serif text-justify whitespace-pre-wrap">Teste seus conhecimentos. Clique para gerar uma pergunta sobre um compositor deste período.</p>
+                        <div className="text-stone-300 mb-4 font-serif text-justify">
+                             {( "Teste seus conhecimentos. Clique para gerar uma pergunta sobre um compositor deste período." || '').split('\n\n').map((paragraph, index) => (
+                                <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                            ))}
+                        </div>
                         <button onClick={onGenerateQuiz} disabled={quiz.isLoading || !period.composers || period.composers.length === 0} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {quiz.isLoading ? 'Criando Pergunta...' : '✨ Gerar Pergunta com IA'}
@@ -140,9 +148,17 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         {quiz.isLoading && <LoadingSpinner />}
                         {quiz.question && !quiz.isLoading && (
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
-                                <p className="text-stone-300 text-lg font-semibold whitespace-pre-wrap mb-4 text-justify">{quiz.question}</p>
+                                <div className="text-stone-300 text-lg font-semibold mb-4 text-justify">
+                                    {(quiz.question || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                    ))}
+                                </div>
                                 {quiz.feedback ? (
-                                    <p className="font-bold text-lg text-amber-300 text-justify whitespace-pre-wrap">{quiz.feedback}</p>
+                                    <div className="font-bold text-lg text-amber-300 text-justify">
+                                        {(quiz.feedback || '').split('\n\n').map((paragraph, index) => (
+                                            <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                        ))}
+                                    </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {quiz.options.map(option => (
@@ -160,7 +176,11 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                 return (
                     <motion.section initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <h2 className="text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><Swords/> Duelo de Titãs</h2>
-                        <p className="text-stone-300 mb-4 font-serif text-justify whitespace-pre-wrap">Selecione dois compositores para uma análise comparativa gerada por IA.</p>
+                        <div className="text-stone-300 mb-4 font-serif text-justify">
+                            {( "Selecione dois compositores para uma análise comparativa gerada por IA." || '').split('\n\n').map((paragraph, index) => (
+                                <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                            ))}
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4 mb-4">
                             <select onChange={(e) => onDuelChange('composer1', e.target.value)} value={duel.composer1} className="flex-1 p-2 bg-gray-800 text-white border border-amber-900/50 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500">
                                 <option value="">Selecione o primeiro compositor</option>
@@ -178,7 +198,11 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         {duel.isLoading && <LoadingSpinner />}
                         {duel.result && !duel.isLoading && (
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
-                                <p className="text-stone-300 whitespace-pre-wrap text-justify">{duel.result}</p>
+                                <div className="text-stone-300 text-justify">
+                                    {(duel.result || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </motion.section>
