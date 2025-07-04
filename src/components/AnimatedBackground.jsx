@@ -14,7 +14,7 @@ const AnimatedBackground = () => (
             return (
                 <motion.div
                     key={`note-${i}`}
-                    className="absolute text-amber-300"
+                    className="absolute text-amber-100"
                     style={{
                         left: `${left}vw`,
                         fontSize: `${size}px`,

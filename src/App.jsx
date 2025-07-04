@@ -5,7 +5,6 @@ import AnimatedBackground from './components/AnimatedBackground';
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
 
-// --- ATENÇÃO: Acessando a API Key de forma segura ---
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 export default function App() {

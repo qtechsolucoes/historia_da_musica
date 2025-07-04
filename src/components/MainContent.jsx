@@ -19,8 +19,8 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
     const tabs = [
         { id: 'overview', label: 'Visão Geral' },
         { id: 'composers', label: 'Compositores' },
-        { id: 'genres', label: 'Gêneros' },
-        { id: 'styles', label: 'Estilos' },
+        { id: 'genres', label: 'Formas/Gêneros' },
+        { id: 'styles', label: 'Técnicas/Estilos' },
         { id: 'instruments', label: 'Instrumentos' },
         { id: 'ensembles', label: 'Conjuntos' },
         { id: 'works', label: 'Obras' },
@@ -85,7 +85,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         image: period.overviewImages[0],
                     },
                     {
-                        title: 'Descrição Musical',
+                        title: 'Características Musicais',
                         text: period.description,
                         image: period.overviewImages[1],
                     }
