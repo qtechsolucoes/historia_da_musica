@@ -29,7 +29,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
             return <div className="text-stone-400 p-4 text-center">Conteúdo não disponível para esta seção.</div>;
         }
         return (
-            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 {items.map((item, index) => (
                     <InfoCard 
                         key={`${type}-${item.name}-${index}`}
@@ -56,11 +56,11 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
         }, {});
 
         return (
-            <div className="space-y-8 max-w-5xl mx-auto">
+            <div className="space-y-8 max-w-6xl mx-auto">
                 {Object.entries(groupedWorks).map(([category, works]) => (
                     <motion.div key={category} layout>
                         <h3 className="text-2xl text-amber-200 font-serif mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {works.map((work, index) => (
                                 <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
                             ))}
@@ -80,7 +80,8 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
 
                 return (
                     <div className="bg-black/20 backdrop-blur-sm p-6 md:p-8 rounded-lg border border-amber-900/50 shadow-lg max-w-7xl mx-auto">
-                        <h2 className="text-4xl text-amber-300 mb-6 font-title text-center">{period.name}</h2>
+                        <h2 className="text-4xl text-amber-300 mb-2 font-serif text-center">{period.name}</h2>
+                        <p className="text-center text-stone-400 mb-8 font-title text-xl">{period.years}</p>
                         
                         <section className="mb-12">
                             <h3 className="text-3xl text-amber-200 font-serif mb-4">Contexto Histórico</h3>
@@ -106,19 +107,19 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         <section>
                             <h3 className="text-3xl text-amber-200 font-serif mb-4">Características Musicais</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify">
-                                    {(period.description || '').split('\n\n').map((paragraph, index) => (
-                                        <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
-                                    ))}
-                                </div>
-                                <div className="md:col-span-1 space-y-6">
-                                    {musicalImages.map((image, index) => (
+                                <div className="md:col-span-1 space-y-6 md:order-2">
+                                     {musicalImages.map((image, index) => (
                                         <figure key={`music-${index}`}>
                                             <img src={image.src} alt={image.caption || `Características Musicais ${index + 1}`} className="w-full h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
                                             {image.caption && (
                                                 <figcaption className="text-xs text-stone-400 mt-2 text-center italic">{image.caption}</figcaption>
                                             )}
                                         </figure>
+                                    ))}
+                                </div>
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify md:order-1">
+                                    {(period.description || '').split('\n\n').map((paragraph, index) => (
+                                        <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
                                     ))}
                                 </div>
                             </div>
@@ -212,26 +213,27 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
     };
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 border-b-2 border-amber-900/50 px-4 sm:px-6">
-                <div className="overflow-x-auto -mb-px flex justify-center">
-                    <nav className="flex space-x-4">
-                        {tabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`whitespace-nowrap py-4 px-1 border-b-2 font-semibold text-sm transition-colors duration-200 ${
-                                    activeTab === tab.id
-                                        ? 'border-amber-300 text-amber-300'
-                                        : 'border-transparent text-stone-400 hover:text-amber-300 hover:border-amber-400'
-                                }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
+        <div className="flex-1 flex flex-col overflow-hidden bg-black/20">
+            {/* --- ÁREA MODIFICADA --- */}
+            <div className="flex-shrink-0 border-b-2 border-amber-900/50 p-4">
+                <nav className="-mb-px flex justify-center flex-wrap gap-x-3 gap-y-2 sm:gap-x-4">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`whitespace-nowrap py-2 px-4 rounded-md border-b-2 font-semibold text-sm transition-all duration-200 ${
+                                activeTab === tab.id
+                                    ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                                    : 'border-transparent text-stone-400 hover:text-amber-300 hover:bg-white/5'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </nav>
             </div>
+            {/* --- FIM DA ÁREA MODIFICADA --- */}
+
             <main className="flex-1 p-4 sm:p-6 overflow-y-auto scrollbar-thin">
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -245,6 +247,10 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                     </motion.div>
                 </AnimatePresence>
             </main>
+             <footer className="text-center p-2 bg-black/30 backdrop-blur-sm z-10 border-t-2 border-amber-900/50 flex-shrink-0">
+                <p className="text-xs text-stone-400">Referência principal: "História da Música Ocidental" por D. J. Grout & C. V. Palisca.</p>
+                <p className="text-xs text-stone-500">© 2025 Qtech Soluções Tecnológicas. Todos os direitos reservados.</p>
+            </footer>
         </div>
     );
 };

@@ -4,6 +4,7 @@ import { musicHistoryData } from './data/musicHistoryData';
 import AnimatedBackground from './components/AnimatedBackground';
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
+import Sidebar from './components/Sidebar';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
@@ -12,6 +13,16 @@ export default function App() {
     const [modalContent, setModalContent] = useState(null);
     const [quiz, setQuiz] = useState({ question: '', options: [], answer: '', feedback: '', isLoading: false });
     const [duel, setDuel] = useState({ composer1: '', composer2: '', result: '', isLoading: false });
+
+    // Estado para rastrear a primeira interação do usuário com a página
+    const [hasInteracted, setHasInteracted] = useState(false);
+
+    // Função para ser chamada no primeiro clique em qualquer lugar
+    const handleFirstInteraction = () => {
+        if (!hasInteracted) {
+            setHasInteracted(true);
+        }
+    };
 
     const selectedPeriod = useMemo(() => musicHistoryData.find(p => p.id === selectedPeriodId), [selectedPeriodId]);
     
@@ -106,40 +117,27 @@ Responda em português do Brasil.`;
     };
 
     return (
-        <div className="h-screen w-screen text-stone-200 font-sans bg-gray-900 flex flex-col" id="app-container">
+        <div className="h-screen w-screen text-stone-200 font-sans bg-gray-900 flex" id="app-container" onClick={handleFirstInteraction}>
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;700&family=MedievalSharp&display=swap');
                 body { font-family: 'EB Garamond', serif; background-color: #111827; overflow: hidden; }
                 .font-title { font-family: 'MedievalSharp', cursive; }
                 .font-serif { font-family: 'EB Garamond', serif; }
                 .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
-                .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+                .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: #a38b71; border-radius: 10px; }
                 .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #c0a58a; }
             `}</style>
             <AnimatedBackground />
-            
-            <header className="text-center p-4 bg-black/30 backdrop-blur-sm z-20 border-b-2 border-amber-900/50 flex-shrink-0">
-                <h1 className="text-3xl md:text-5xl font-title text-amber-300" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
-                    Codex Historiæ Musicæ
-                </h1>
-            </header>
 
-            <nav className="flex-shrink-0 bg-black/20 backdrop-blur-sm border-b-2 border-amber-900/50">
-                <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-                    <div className="relative flex items-center justify-center h-16">
-                        <div className="flex items-center space-x-2 sm:space-x-4 overflow-x-auto scrollbar-thin">
-                            {musicHistoryData.map((period) => (
-                                <button key={period.id} onClick={() => handleSelectPeriod(period.id)} className={`px-3 py-2 rounded-md text-sm font-semibold transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${selectedPeriodId === period.id ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20' : 'text-amber-300 hover:bg-gray-700/50'}`}>
-                                    <span>{period.name}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </nav>
+            <Sidebar
+                periods={musicHistoryData}
+                selectedPeriod={selectedPeriod}
+                onSelectPeriod={handleSelectPeriod}
+                hasInteracted={hasInteracted}
+            />
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden">
                 {selectedPeriod && (
                     <MainContent 
                         period={selectedPeriod} 
@@ -154,11 +152,6 @@ Responda em português do Brasil.`;
                 )}
             </div>
             
-            <footer className="text-center p-2 bg-black/30 backdrop-blur-sm z-20 border-t-2 border-amber-900/50 flex-shrink-0">
-                <p className="text-xs text-stone-400">Referência principal: "História da Música Ocidental" por D. J. Grout & C. V. Palisca.</p>
-                <p className="text-xs text-stone-500">© 2025 Qtech Soluções Tecnológicas. Todos os direitos reservados.</p>
-            </footer>
-
             <DetailModal content={modalContent} onClose={handleCloseModal} />
         </div>
     );
