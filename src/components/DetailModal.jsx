@@ -23,6 +23,24 @@ const DetailModal = ({ content, onClose }) => {
         setShowChat(false);
     }, [content]);
 
+    if (!content) return null;
+
+    const { type, data } = content;
+
+    // Objeto para traduzir os tipos para os títulos do modal
+    const typeTranslations = {
+        composer: 'Compositor',
+        instrument: 'Instrumento',
+        work: 'Obra',
+        genre: 'Gênero/Forma',
+        style: 'Estilo/Técnica',
+        ensemble: 'Conjunto'
+    };
+
+    // Gera o título usando o objeto de tradução
+    const translatedType = typeTranslations[type] || type;
+    const title = `${translatedType}: ${type === 'work' ? data.title : data.name}`;
+    
     const handleGenerateAnalysis = async (title, composer) => {
         setIsAnalysisLoading(true);
         setGeneratedAnalysis('');
@@ -85,143 +103,130 @@ const DetailModal = ({ content, onClose }) => {
         }
     };
 
-
-    if (!content) return null;
-
-    const { type, data } = content;
-    let title, details;
-
-    switch (type) {
-        case 'composer':
-            title = `Compositor: ${data.name}`;
-            details = (
-                <>
-                    <div className="flex flex-col md:flex-row gap-6">
-                        <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
-                        <div className="flex-1">
-                            <p className="font-semibold text-amber-200">{data.lifespan}</p>
-                            <div className="max-h-48 overflow-y-auto scrollbar-thin pr-2">
-                                <p className="mt-2 text-stone-300">{data.bio}</p>
-                            </div>
-                            <h4 className="font-bold mt-4 text-amber-100 font-serif">Principais Obras:</h4>
-                            <ul className="list-disc list-inside text-stone-300 mt-1">
-                                {data.majorWorks.map(work => <li key={work}>{work}</li>)}
-                            </ul>
-                        </div>
-                    </div>
-                    <div className="border-t border-amber-900/50 pt-4 mt-6">
-                         <button onClick={() => setShowChat(!showChat)} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all">
-                            <MessageSquare size={18} />
-                            {showChat ? 'Fechar Conversa' : 'Conversar com o Mestre (IA)'}
-                        </button>
-                        <AnimatePresence>
-                        {showChat && (
-                            <motion.div 
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mt-4 overflow-hidden"
-                            >
-                                <div className="h-64 bg-black/30 rounded-t-md border border-b-0 border-amber-900/50 p-4 overflow-y-auto flex flex-col space-y-2 scrollbar-thin">
-                                    {chatHistory.map((msg, index) => (
-                                        <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <p className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${msg.role === 'user' ? 'bg-amber-800/70 text-white' : 'bg-gray-700 text-stone-200'}`}>
-                                                {msg.text}
-                                            </p>
-                                        </div>
-                                    ))}
-                                    {isChatLoading && <div className="flex justify-start"><LoadingSpinner size="h-6 w-6"/></div>}
+    const renderDetails = () => {
+        switch (type) {
+            case 'composer':
+                return (
+                    <>
+                        <div className="flex flex-col md:flex-row gap-6">
+                            <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
+                            <div className="flex-1">
+                                <p className="font-semibold text-amber-200">{data.lifespan}</p>
+                                <div className="max-h-48 overflow-y-auto scrollbar-thin pr-2">
+                                    <p className="mt-2 text-stone-300 whitespace-pre-wrap text-justify">{data.bio}</p>
                                 </div>
-                                <form onSubmit={handleChatSubmit} className="flex">
-                                    <input 
-                                        type="text"
-                                        value={chatInput}
-                                        onChange={(e) => setChatInput(e.target.value)}
-                                        placeholder={`Pergunte a ${data.name}...`}
-                                        className="flex-1 p-2 bg-gray-800 text-white border border-amber-900/50 rounded-bl-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                                    />
-                                    <button type="submit" className="p-2 bg-amber-700 text-white rounded-br-md border border-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50" disabled={isChatLoading}>
-                                        <Send size={20}/>
-                                    </button>
-                                </form>
-                            </motion.div>
-                        )}
-                        </AnimatePresence>
-                    </div>
-                </>
-            );
-            break;
-        // ALTERADO: A estrutura dos casos abaixo foi alterada para replicar o layout de 'composer'
-        case 'instrument':
-        case 'ensemble':
-             title = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${data.name}`;
-             details = (
-                <>
-                    <div className="flex flex-col md:flex-row gap-6 items-start">
-                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
-                       <div className="flex-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
-                          <p className="text-stone-300 leading-relaxed">{data.description}</p>
-                       </div>
-                   </div>
-                   {data.youtubeId && (
-                        <div className="aspect-w-16 aspect-h-9 mt-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
-                            <iframe 
-                                src={`https://www.youtube.com/embed/${data.youtubeId}`} 
-                                title="YouTube video player" 
-                                frameBorder="0" 
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                allowFullScreen 
-                                className="w-full h-full"
-                            ></iframe>
-                        </div>
-                   )}
-                </>
-             );
-             break;
-        case 'work':
-            title = `Obra: ${data.title}`;
-            details = (
-                <>
-                    <p className="font-semibold text-amber-200 mb-4">Compositor: {data.composer} ({data.year})</p>
-                    <div className="aspect-w-16 aspect-h-9 mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
-                        <iframe src={`https://www.youtube.com/embed/${data.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full"></iframe>
-                    </div>
-                    <div className="max-h-40 overflow-y-auto scrollbar-thin pr-2">
-                        <p className="text-stone-300 italic leading-relaxed mb-6">"{data.analysis}"</p>
-                    </div>
-                    <div className="border-t border-amber-900/50 pt-4">
-                        <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
-                            <Sparkles size={18} />
-                            {isAnalysisLoading ? 'Analisando...' : '✨ Análise Aprofundada com IA'}
-                        </button>
-                        {isAnalysisLoading && <LoadingSpinner />}
-                        {generatedAnalysis && (
-                            <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
-                                <h4 className="font-bold text-amber-200 font-serif mb-2">Análise da IA:</h4>
-                                <p className="text-stone-300 whitespace-pre-wrap">{generatedAnalysis}</p>
+                                <h4 className="font-bold mt-4 text-amber-100 font-serif">Principais Obras:</h4>
+                                <ul className="list-disc list-inside text-stone-300 mt-1">
+                                    {data.majorWorks.map(work => <li key={work}>{work}</li>)}
+                                </ul>
                             </div>
+                        </div>
+                        <div className="border-t border-amber-900/50 pt-4 mt-6">
+                             <button onClick={() => setShowChat(!showChat)} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all">
+                                <MessageSquare size={18} />
+                                {showChat ? 'Fechar Conversa' : 'Conversar com o Mestre (IA)'}
+                            </button>
+                            <AnimatePresence>
+                            {showChat && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mt-4 overflow-hidden"
+                                >
+                                    <div className="h-64 bg-black/30 rounded-t-md border border-b-0 border-amber-900/50 p-4 overflow-y-auto flex flex-col space-y-2 scrollbar-thin">
+                                        {chatHistory.map((msg, index) => (
+                                            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <p className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg whitespace-pre-wrap text-justify ${msg.role === 'user' ? 'bg-amber-800/70 text-white' : 'bg-gray-700 text-stone-200'}`}>
+                                                    {msg.text}
+                                                </p>
+                                            </div>
+                                        ))}
+                                        {isChatLoading && <div className="flex justify-start"><LoadingSpinner size="h-6 w-6"/></div>}
+                                    </div>
+                                    <form onSubmit={handleChatSubmit} className="flex">
+                                        <input 
+                                            type="text"
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            placeholder={`Pergunte a ${data.name}...`}
+                                            className="flex-1 p-2 bg-gray-800 text-white border border-amber-900/50 rounded-bl-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        />
+                                        <button type="submit" className="p-2 bg-amber-700 text-white rounded-br-md border border-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50" disabled={isChatLoading}>
+                                            <Send size={20}/>
+                                        </button>
+                                    </form>
+                                </motion.div>
+                            )}
+                            </AnimatePresence>
+                        </div>
+                    </>
+                );
+            case 'instrument':
+            case 'ensemble':
+                 return (
+                    <>
+                        <div className="flex flex-col md:flex-row gap-6 items-start">
+                           <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
+                           <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2">
+                              <p className="text-stone-300 leading-relaxed whitespace-pre-wrap text-justify">{data.description}</p>
+                           </div>
+                       </div>
+                       {data.youtubeId && (
+                            <div className="aspect-w-16 aspect-h-9 mt-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
+                                <iframe 
+                                    src={`https://www.youtube.com/embed/${data.youtubeId}`} 
+                                    title="YouTube video player" 
+                                    frameBorder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowFullScreen 
+                                    className="w-full h-full"
+                                ></iframe>
+                            </div>
+                       )}
+                    </>
+                 );
+            case 'work':
+                return (
+                    <>
+                        <p className="font-semibold text-amber-200 mb-4">Compositor: {data.composer} ({data.year})</p>
+                        <div className="aspect-w-16 aspect-h-9 mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
+                            <iframe src={`https://www.youtube.com/embed/${data.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full"></iframe>
+                        </div>
+                        <div className="max-h-40 overflow-y-auto scrollbar-thin pr-2">
+                            <p className="text-stone-300 italic leading-relaxed mb-6 whitespace-pre-wrap text-justify">"{data.analysis}"</p>
+                        </div>
+                        <div className="border-t border-amber-900/50 pt-4">
+                            <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
+                                <Sparkles size={18} />
+                                {isAnalysisLoading ? 'Analisando...' : '✨ Análise Aprofundada com IA'}
+                            </button>
+                            {isAnalysisLoading && <LoadingSpinner />}
+                            {generatedAnalysis && (
+                                <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
+                                    <h4 className="font-bold text-amber-200 font-serif mb-2">Análise da IA:</h4>
+                                    <p className="text-stone-300 whitespace-pre-wrap text-justify">{generatedAnalysis}</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                );
+            case 'genre':
+            case 'style':
+                return (
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                        {data.image && (
+                           <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
                         )}
+                        <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2">
+                            <p className="text-stone-300 leading-relaxed whitespace-pre-wrap text-justify">{data.description}</p>
+                        </div>
                     </div>
-                </>
-            );
-            break;
-        // ALTERADO: A estrutura dos casos abaixo foi alterada para replicar o layout de 'composer'
-        case 'genre':
-        case 'style':
-            title = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${data.name}`;
-            details = (
-                <div className="flex flex-col md:flex-row gap-6 items-start">
-                    {data.image && (
-                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
-                    )}
-                    <div className="flex-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
-                        <p className="text-stone-300 leading-relaxed">{data.description}</p>
-                    </div>
-                </div>
-            );
-            break;
-        default: return null;
+                );
+            default: return null;
+        }
     }
+
 
     return (
         <AnimatePresence>
@@ -238,11 +243,11 @@ const DetailModal = ({ content, onClose }) => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="bg-gray-900 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-2xl max-w-3xl w-full p-6 md:p-8 border border-amber-800/60 relative max-h-[90vh] overflow-y-auto scrollbar-thin"
+                        className="bg-gray-900 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-2xl max-w-4xl w-full p-6 md:p-8 border border-amber-800/60 relative max-h-[95vh] overflow-y-auto scrollbar-thin"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-3xl font-bold text-amber-300 mb-4 font-title">{title}</h2>
-                        <div className="text-base text-stone-300 leading-relaxed">{details}</div>
+                        <div className="text-base text-stone-300 leading-relaxed">{renderDetails()}</div>
                         <button onClick={onClose} className="absolute top-3 right-3 text-stone-400 hover:text-amber-300 hover:bg-gray-700 rounded-full p-2 transition-colors" aria-label="Fechar modal">
                             <X size={24} />
                         </button>
