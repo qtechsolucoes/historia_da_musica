@@ -97,10 +97,12 @@ const DetailModal = ({ content, onClose }) => {
             details = (
                 <>
                     <div className="flex flex-col md:flex-row gap-6">
-                        <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
+                        <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
                         <div className="flex-1">
                             <p className="font-semibold text-amber-200">{data.lifespan}</p>
-                            <p className="mt-2 text-stone-300">{data.bio}</p>
+                            <div className="max-h-48 overflow-y-auto scrollbar-thin pr-2">
+                                <p className="mt-2 text-stone-300">{data.bio}</p>
+                            </div>
                             <h4 className="font-bold mt-4 text-amber-100 font-serif">Principais Obras:</h4>
                             <ul className="list-disc list-inside text-stone-300 mt-1">
                                 {data.majorWorks.map(work => <li key={work}>{work}</li>)}
@@ -149,14 +151,15 @@ const DetailModal = ({ content, onClose }) => {
                 </>
             );
             break;
+        // ALTERADO: A estrutura dos casos abaixo foi alterada para replicar o layout de 'composer'
         case 'instrument':
         case 'ensemble':
              title = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${data.name}`;
              details = (
                 <>
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50 mb-4 md:mb-0"/>
-                       <div className="flex-1">
+                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
+                       <div className="flex-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
                           <p className="text-stone-300 leading-relaxed">{data.description}</p>
                        </div>
                    </div>
@@ -180,11 +183,12 @@ const DetailModal = ({ content, onClose }) => {
             details = (
                 <>
                     <p className="font-semibold text-amber-200 mb-4">Compositor: {data.composer} ({data.year})</p>
-                    {/* Linha corrigida com as classes originais do Tailwind */}
                     <div className="aspect-w-16 aspect-h-9 mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
                         <iframe src={`https://www.youtube.com/embed/${data.youtubeId}`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="w-full h-full"></iframe>
                     </div>
-                    <p className="text-stone-300 italic leading-relaxed mb-6">"{data.analysis}"</p>
+                    <div className="max-h-40 overflow-y-auto scrollbar-thin pr-2">
+                        <p className="text-stone-300 italic leading-relaxed mb-6">"{data.analysis}"</p>
+                    </div>
                     <div className="border-t border-amber-900/50 pt-4">
                         <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
                             <Sparkles size={18} />
@@ -201,16 +205,19 @@ const DetailModal = ({ content, onClose }) => {
                 </>
             );
             break;
+        // ALTERADO: A estrutura dos casos abaixo foi alterada para replicar o layout de 'composer'
         case 'genre':
         case 'style':
             title = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${data.name}`;
             details = (
-              <>
-                {data.image && (
-                   <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full h-auto object-contain rounded-md shadow-lg mb-4 bg-stone-200 p-2"/>
-                )}
-                <p className="text-stone-300 leading-relaxed">{data.description}</p>
-              </>
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                    {data.image && (
+                       <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>
+                    )}
+                    <div className="flex-1 max-h-48 overflow-y-auto scrollbar-thin pr-2">
+                        <p className="text-stone-300 leading-relaxed">{data.description}</p>
+                    </div>
+                </div>
             );
             break;
         default: return null;
