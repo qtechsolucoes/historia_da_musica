@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Square } from 'lucide-react';
+import './Sidebar.css';
 
 const Sidebar = ({ periods, selectedPeriod, onSelectPeriod, hasInteracted }) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -54,7 +55,7 @@ const Sidebar = ({ periods, selectedPeriod, onSelectPeriod, hasInteracted }) => 
     return (
         <aside className="w-64 bg-black/30 backdrop-blur-md border-r-2 border-amber-900/50 flex flex-col flex-shrink-0">
             <header className="text-center p-4 border-b-2 border-amber-900/50">
-                <h1 className="text-2xl lg:text-3xl font-title text-amber-300" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
+                <h1 className="text-2xl lg:text-3xl font-title gold-text-effect" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
                     Codex Historiæ Musicæ
                 </h1>
             </header>
@@ -99,6 +100,11 @@ const Sidebar = ({ periods, selectedPeriod, onSelectPeriod, hasInteracted }) => 
                         className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer range-sm accent-amber-300"
                         aria-label="Volume"
                     />
+                </div>
+                <div className="now-playing-container">
+                    <p className="now-playing-text">
+                        {isPlaying && selectedPeriod ? `Tocando agora: ${selectedPeriod.referenceSongTitle}` : 'Player pausado'}
+                    </p>
                 </div>
             </div>
 

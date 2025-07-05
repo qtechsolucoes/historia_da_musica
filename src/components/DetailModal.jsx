@@ -115,7 +115,7 @@ const DetailModal = ({ content, onClose }) => {
                                         <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                                     ))}
                                 </div>
-                                <h4 className="font-bold mt-4 text-amber-100 font-serif">Principais Obras:</h4>
+                                <h4 className="font-bold mt-4 text-amber-100">Principais Obras:</h4>
                                 <ul className="list-disc list-inside text-stone-300 mt-1">
                                     {data.majorWorks.map(work => <li key={work}>{work}</li>)}
                                 </ul>
@@ -198,7 +198,7 @@ const DetailModal = ({ content, onClose }) => {
                             {isAnalysisLoading && <LoadingSpinner />}
                             {generatedAnalysis && (
                                 <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
-                                    <h4 className="font-bold text-amber-200 font-serif mb-2">Análise da IA:</h4>
+                                    <h4 className="font-bold text-amber-200 mb-2">Análise da IA:</h4>
                                     <div className="text-stone-300 text-justify">
                                         {(generatedAnalysis || '').split('\n\n').map((paragraph, index) => (
                                             <p key={index} className="mb-2 last:mb-0">{paragraph}</p>

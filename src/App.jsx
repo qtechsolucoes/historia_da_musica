@@ -1,23 +1,31 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { musicHistoryData } from './data/musicHistoryData';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import AnimatedBackground from './components/AnimatedBackground';
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
-import Sidebar from './components/Sidebar';
+import Sidebar from './components/sidebar';
+import LoadingScreen from './components/LoadingScreen';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 export default function App() {
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedPeriodId, setSelectedPeriodId] = useState('medieval');
     const [modalContent, setModalContent] = useState(null);
     const [quiz, setQuiz] = useState({ question: '', options: [], answer: '', feedback: '', isLoading: false });
     const [duel, setDuel] = useState({ composer1: '', composer2: '', result: '', isLoading: false });
-
-    // Estado para rastrear a primeira interação do usuário com a página
     const [hasInteracted, setHasInteracted] = useState(false);
 
-    // Função para ser chamada no primeiro clique em qualquer lugar
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 5000); 
+
+        return () => clearTimeout(timer);
+    }, []);
+
     const handleFirstInteraction = () => {
         if (!hasInteracted) {
             setHasInteracted(true);
@@ -92,7 +100,10 @@ Responda em português do Brasil.`;
 
                 if (questionLine && optionsLine && answerLine) {
                     const question = questionLine.replace('PERGUNTA:', '').trim();
-                    const options = optionsLine.replace('OPÇÕES:', '').split(',').map(opt => opt.trim());
+                    const options = optionsLine.replace('OPÇÕES:', '').split(/,(?![^[]*\])/).map(opt => {
+                        opt = opt.trim().replace(/^"|"$/g, '');
+                        return opt;
+                    });
                     const answer = answerLine.replace('RESPOSTA:', '').trim();
                     setQuiz({ question, options, answer, feedback: '', isLoading: false });
                 } else {
@@ -117,42 +128,60 @@ Responda em português do Brasil.`;
     };
 
     return (
-        <div className="h-screen w-screen text-stone-200 font-sans bg-gray-900 flex" id="app-container" onClick={handleFirstInteraction}>
+        <div className="h-screen w-screen bg-gray-900">
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;700&family=MedievalSharp&display=swap');
-                body { font-family: 'EB Garamond', serif; background-color: #111827; overflow: hidden; }
+                @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+                body { background-color: #111827; overflow: hidden; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
                 .font-title { font-family: 'MedievalSharp', cursive; }
-                .font-serif { font-family: 'EB Garamond', serif; }
+                .font-serif { font-family: 'Times New Roman', Times, serif; }
+                .text-shadow-gold { text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); }
                 .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
                 .scrollbar-thin::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: #a38b71; border-radius: 10px; }
                 .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #c0a58a; }
             `}</style>
+
             <AnimatedBackground />
-
-            <Sidebar
-                periods={musicHistoryData}
-                selectedPeriod={selectedPeriod}
-                onSelectPeriod={handleSelectPeriod}
-                hasInteracted={hasInteracted}
-            />
-
-            <div className="flex-1 flex flex-col overflow-hidden">
-                {selectedPeriod && (
-                    <MainContent 
-                        period={selectedPeriod} 
-                        onCardClick={handleOpenModal}
-                        quiz={quiz}
-                        onGenerateQuiz={handleGenerateQuiz}
-                        onQuizGuess={handleQuizGuess}
-                        duel={duel}
-                        onDuelChange={handleDuelChange}
-                        onGenerateDuel={handleGenerateDuel}
-                    />
-                )}
-            </div>
             
-            <DetailModal content={modalContent} onClose={handleCloseModal} />
+            <AnimatePresence>
+                {isLoading ? (
+                    <LoadingScreen key="loading-screen" />
+                ) : (
+                    <motion.div 
+                        key="main-app" 
+                        className="h-full w-full text-stone-200 font-sans flex absolute top-0 left-0" 
+                        id="app-container" 
+                        onClick={handleFirstInteraction}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 1.0 }}
+                    >
+                        <Sidebar
+                            periods={musicHistoryData}
+                            selectedPeriod={selectedPeriod}
+                            onSelectPeriod={handleSelectPeriod}
+                            hasInteracted={hasInteracted}
+                        />
+
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            {selectedPeriod && (
+                                <MainContent 
+                                    period={selectedPeriod} 
+                                    onCardClick={handleOpenModal}
+                                    quiz={quiz}
+                                    onGenerateQuiz={handleGenerateQuiz}
+                                    onQuizGuess={handleQuizGuess}
+                                    duel={duel}
+                                    onDuelChange={handleDuelChange}
+                                    onGenerateDuel={handleGenerateDuel}
+                                />
+                            )}
+                        </div>
+                        
+                        <DetailModal content={modalContent} onClose={handleCloseModal} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

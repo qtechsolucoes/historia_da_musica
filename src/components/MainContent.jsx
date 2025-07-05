@@ -59,7 +59,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
             <div className="space-y-8 max-w-6xl mx-auto">
                 {Object.entries(groupedWorks).map(([category, works]) => (
                     <motion.div key={category} layout>
-                        <h3 className="text-2xl text-amber-200 font-serif mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
+                        <h3 className="text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {works.map((work, index) => (
                                 <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
@@ -80,13 +80,19 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
 
                 return (
                     <div className="bg-black/20 backdrop-blur-sm p-6 md:p-8 rounded-lg border border-amber-900/50 shadow-lg max-w-7xl mx-auto">
-                        <h2 className="text-4xl text-amber-300 mb-2 font-serif text-center">{period.name}</h2>
+                        <motion.div
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                        <h2 className="text-4xl text-amber-300 mb-2 font-serif text-shadow-gold text-center">{period.name}</h2>
+                        </motion.div>
                         <p className="text-center text-stone-400 mb-8 font-title text-xl">{period.years}</p>
                         
                         <section className="mb-12">
-                            <h3 className="text-3xl text-amber-200 font-serif mb-4">Contexto Histórico</h3>
+                            <h3 className="text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Contexto Histórico</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify">
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-lg text-justify">
                                     {(period.historicalContext || '').split('\n\n').map((paragraph, index) => (
                                         <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
                                     ))}
@@ -105,7 +111,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         </section>
 
                         <section>
-                            <h3 className="text-3xl text-amber-200 font-serif mb-4">Características Musicais</h3>
+                            <h3 className="text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Características Musicais</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
                                 <div className="md:col-span-1 space-y-6 md:order-2">
                                      {musicalImages.map((image, index) => (
@@ -117,7 +123,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                                         </figure>
                                     ))}
                                 </div>
-                                <div className="md:col-span-2 text-stone-300 leading-relaxed font-serif text-lg text-justify md:order-1">
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-lg text-justify md:order-1">
                                     {(period.description || '').split('\n\n').map((paragraph, index) => (
                                         <p key={index} className="mb-4 last:mb-0">{paragraph}</p>
                                     ))}
@@ -137,7 +143,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                 return (
                     <motion.section initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <h2 className="text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><BrainCircuit/> Desafio dos Mestres</h2>
-                        <div className="text-stone-300 mb-4 font-serif text-justify">
+                        <div className="text-stone-300 mb-4 text-justify">
                              {( "Teste seus conhecimentos. Clique para gerar uma pergunta sobre um compositor deste período." || '').split('\n\n').map((paragraph, index) => (
                                 <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                             ))}
@@ -177,7 +183,7 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                 return (
                     <motion.section initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <h2 className="text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><Swords/> Duelo de Titãs</h2>
-                        <div className="text-stone-300 mb-4 font-serif text-justify">
+                        <div className="text-stone-300 mb-4 text-justify">
                             {( "Selecione dois compositores para uma análise comparativa gerada por IA." || '').split('\n\n').map((paragraph, index) => (
                                 <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                             ))}
@@ -243,7 +249,13 @@ const MainContent = ({ period, onCardClick, quiz, onGenerateQuiz, onQuizGuess, d
                         exit={{ opacity: 0, y: -20 }}
                         transition={{ duration: 0.3 }}
                     >
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
                         {renderContent()}
+                        </motion.div>
                     </motion.div>
                 </AnimatePresence>
             </main>

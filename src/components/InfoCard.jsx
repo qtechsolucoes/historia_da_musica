@@ -20,7 +20,7 @@ const InfoCard = ({ item, type, onCardClick }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.3 }}
-            className="bg-gray-900/50 backdrop-blur-sm rounded-md shadow-lg border border-amber-900/50 cursor-pointer group overflow-hidden"
+            className="bg-gray-900/50 backdrop-blur-sm rounded-md shadow-lg border border-amber-900/50 cursor-pointer group overflow-hidden hover:shadow-amber-400/20 hover:border-amber-400 transition-all duration-300"
             onClick={() => onCardClick(type, item)}
         >
             <div className="aspect-square w-full bg-black/20 flex items-center justify-center overflow-hidden rounded-t-md">
