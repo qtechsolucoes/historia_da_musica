@@ -164,20 +164,55 @@ const DetailModal = ({ content, onClose }) => {
                         </div>
                     </>
                 );
+            
+            // --- CÓDIGO MODIFICADO ABAIXO ---
             case 'instrument':
+                // Layout de duas colunas para Instrumentos (com vídeo)
+                return (
+                   <div className="flex flex-col lg:flex-row gap-8 items-start">
+                       <div className="lg:w-3/5">
+                           <div className="flex flex-col md:flex-row gap-6 items-start">
+                               {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
+                               <div className="flex-1 max-h-[calc(95vh-10rem)] overflow-y-auto scrollbar-thin pr-2 text-stone-300 leading-relaxed text-justify">
+                                   {(data.description || '').split('\n\n').map((paragraph, index) => (
+                                       <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
+                                   ))}
+                               </div>
+                           </div>
+                       </div>
+                       {data.youtubeId && (
+                          <div className="w-full lg:w-2/5 flex-shrink-0">
+                              <div className="w-full h-[65vh] rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
+                                  <iframe 
+                                      src={`https://www.youtube.com/embed/${data.youtubeId}`} 
+                                      title="YouTube video player" 
+                                      frameBorder="0" 
+                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                      allowFullScreen 
+                                      className="w-full h-full">
+                                  </iframe>
+                              </div>
+                          </div>
+                       )}
+                  </div>
+                );
+
             case 'ensemble':
             case 'genre':
             case 'style':
-                 return (
+                // Layout de coluna única para outros tipos (sem vídeo)
+                return (
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                       {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-48 h-48 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
-                       <div className="flex-1 max-h-96 overflow-y-auto scrollbar-thin pr-2 text-stone-300 leading-relaxed text-justify">
+                       {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
+                       <div className="flex-1 max-h-[calc(95vh-10rem)] overflow-y-auto scrollbar-thin pr-2 text-stone-300 leading-relaxed text-justify">
                           {(data.description || '').split('\n\n').map((paragraph, index) => (
                             <p key={index} className="mb-2 last:mb-0">{paragraph}</p>
                           ))}
                        </div>
-                   </div>
-                 );
+                    </div>
+                );
+            // --- FIM DO CÓDIGO MODIFICADO ---
+
             case 'work':
                 return (
                     <>
@@ -229,7 +264,7 @@ const DetailModal = ({ content, onClose }) => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="bg-gray-900 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-2xl max-w-4xl w-full p-6 md:p-8 border border-amber-800/60 relative max-h-[95vh] overflow-y-auto scrollbar-thin"
+                        className="bg-gray-900 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-2xl max-w-7xl w-full p-6 md:p-8 border border-amber-800/60 relative max-h-[95vh] overflow-y-auto scrollbar-thin"
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-3xl font-bold text-amber-300 mb-4 font-title">{title}</h2>

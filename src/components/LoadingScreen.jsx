@@ -28,7 +28,7 @@ const LoadingScreen = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1, duration: 1.5 }}
             >
-                Uma Jornada Pelas Eras da Música
+                Uma Jornada Pela História da Música
             </motion.p>
         </motion.div>
     );
