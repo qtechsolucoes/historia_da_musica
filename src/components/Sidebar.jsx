@@ -1,47 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Square } from 'lucide-react';
+import { Play, Pause, Square, LogOut, Award } from 'lucide-react';
+import { GoogleLogin, googleLogout } from '@react-oauth/google';
 import './Sidebar.css';
 
-const Sidebar = ({ periods, selectedPeriod, onSelectPeriod, hasInteracted }) => {
+// O Sidebar agora está mais simples. Ele recebe onLoginSuccess e onLogout do App.jsx
+const Sidebar = ({ 
+    periods, 
+    selectedPeriod, 
+    onSelectPeriod, 
+    hasInteracted, 
+    user, 
+    score, 
+    onLoginSuccess, // Nova prop
+    onLogout      // Nova prop
+}) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef(null);
     const [volume, setVolume] = useState(0.5);
 
     useEffect(() => {
-        // A lógica só roda se o usuário já tiver interagido com a página
         if (!audioRef.current || !selectedPeriod || !hasInteracted) return;
-
         if (selectedPeriod.referenceSong) {
             const isNewSong = !audioRef.current.src.endsWith(selectedPeriod.referenceSong);
-            
-            if (isNewSong) {
-                audioRef.current.src = selectedPeriod.referenceSong;
-            }
-
+            if (isNewSong) audioRef.current.src = selectedPeriod.referenceSong;
             const playPromise = audioRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch(() => {
-                    setIsPlaying(false);
-                    console.warn("Reprodução de áudio falhou. O navegador pode ter bloqueado.");
-                });
+                playPromise.catch(() => setIsPlaying(false));
             }
         }
-    }, [selectedPeriod, hasInteracted]); // Roda o efeito quando o período ou o estado de interação mudam
+    }, [selectedPeriod, hasInteracted]);
 
     useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.volume = volume;
-        }
+        if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
 
     const handlePlayPause = () => {
         if (!audioRef.current?.src) return;
-
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
-            audioRef.current.play().catch(() => console.error("Falha ao reproduzir áudio."));
-        }
+        isPlaying ? audioRef.current.pause() : audioRef.current.play().catch(console.error);
     };
 
     const handleStop = () => {
@@ -60,6 +55,29 @@ const Sidebar = ({ periods, selectedPeriod, onSelectPeriod, hasInteracted }) => 
                 </h1>
             </header>
 
+            <div className="p-4 border-b-2 border-amber-900/50">
+                {user ? (
+                    <div className="flex flex-col items-center text-center">
+                        <img src={user.picture} alt={user.name} className="w-16 h-16 rounded-full border-2 border-amber-400 mb-2" />
+                        <h2 className="font-semibold text-amber-200 truncate">{user.name}</h2>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Award className="text-amber-400" size={18} />
+                            <p className="text-stone-300 font-bold">{score} pontos</p>
+                        </div>
+                        <button onClick={onLogout} className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/20 text-red-200 border border-red-500 rounded-md hover:bg-red-600/40 transition-all">
+                            <LogOut size={16} />
+                            Sair
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center">
+                         <p className="text-stone-300 text-sm text-center mb-3">Faça login para salvar sua pontuação!</p>
+                         {/* O botão do Google agora chama a função onLoginSuccess que vem do App.jsx */}
+                         <GoogleLogin onSuccess={onLoginSuccess} onError={() => console.log('Login Failed')} theme="filled_black" text="signin_with" shape="pill" />
+                    </div>
+                )}
+            </div>
+            
             <nav className="flex-1 p-4 overflow-y-auto scrollbar-thin">
                 <ul className="space-y-2">
                     {periods.map(period => (
