@@ -8,7 +8,8 @@ import DetailModal from './components/DetailModal';
 import Sidebar from './components/sidebar';
 import LoadingScreen from './components/LoadingScreen';
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+// A CHAVE DA API FOI REMOVIDA DESTE ARQUIVO
+// const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const backendUrl = 'http://localhost:5001';
 
@@ -90,7 +91,7 @@ export default function App() {
 
     const handleCorrectAnswer = async () => {
         if (!currentUser) return;
-        const newScore = score + 15; // Pontuação maior para um desafio mais difícil
+        const newScore = score + 15;
         setScore(newScore);
         correctSoundRef.current?.play().catch(console.error);
         try {
@@ -112,6 +113,7 @@ export default function App() {
         incorrectSoundRef.current?.play().catch(console.error);
     };
 
+    // FUNÇÃO ATUALIZADA
     const handleGenerateQuiz = async () => {
         setQuiz({ question: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
         if (!selectedPeriod.composers || selectedPeriod.composers.length === 0) {
@@ -127,13 +129,22 @@ OPÇÕES: [Opção A];;[Opção B];;[Opção C];;[Opção D]
 RESPOSTA: [Texto da opção correta aqui]
 
 Responda em português do Brasil.`;
+        
         try {
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: chatHistory };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            // CHAMADA SEGURA PARA O BACKEND
+            const response = await fetch(`${backendUrl}/api/gemini`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            });
+
+            if (!response.ok) {
+                throw new Error("Falha ao comunicar com o servidor para gerar quiz.");
+            }
+            
             const result = await response.json();
             const text = result.candidates[0]?.content?.parts[0]?.text;
+
             if (text) {
                 const lines = text.split('\n');
                 const questionLine = lines.find(line => line.startsWith('PERGUNTA:'));
@@ -165,6 +176,7 @@ Responda em português do Brasil.`;
         setQuiz(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
     };
 
+    // FUNÇÃO ATUALIZADA
     const handleGenerateWhoAmI = async () => {
         setWhoAmI({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
         if (!selectedPeriod.composers || selectedPeriod.composers.length < 4) {
@@ -174,14 +186,22 @@ Responda em português do Brasil.`;
         let randomComposers = [...selectedPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
         const correctComposer = randomComposers[0];
         const prompt = `Crie uma descrição curta e enigmática para o desafio "Quem sou eu?" sobre o compositor ${correctComposer.name}. A descrição deve ter de 2 a 3 frases, destacando uma característica única, uma obra famosa ou um fato curioso de sua vida, sem mencionar o nome. Deve ser um desafio para um estudante de música. Responda apenas com a descrição, em português do Brasil.`;
+        
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            // CHAMADA SEGURA PARA O BACKEND
+            const response = await fetch(`${backendUrl}/api/gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
+                body: JSON.stringify({ prompt: prompt })
             });
+            
+            if (!response.ok) {
+                throw new Error("Falha ao comunicar com o servidor para gerar 'Quem sou eu?'.");
+            }
+
             const result = await response.json();
             const description = result.candidates[0]?.content?.parts[0]?.text;
+
             if(description){
                 setWhoAmI({
                     description: description.trim(),

@@ -3,7 +3,8 @@ import { X, Sparkles, MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from './LoadingSpinner';
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+// A CHAVE DE API FOI REMOVIDA DAQUI
+// const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 const modalLayouts = {
   composer: 'max-w-6xl h-[90vh]',
@@ -14,7 +15,6 @@ const modalLayouts = {
   ensemble: 'max-w-6xl',
   default: 'max-w-4xl',
 };
-
 
 const DetailModal = ({ content, onClose }) => {
     const [generatedAnalysis, setGeneratedAnalysis] = useState('');
@@ -53,25 +53,28 @@ const DetailModal = ({ content, onClose }) => {
         setIsAnalysisLoading(true);
         setGeneratedAnalysis('');
         const prompt = `Como um musicólogo especialista, forneça uma análise aprofundada e crítica sobre a obra "${title}" de ${composer}. Fale sobre seu contexto histórico, inovações harmônicas e estruturais, instrumentação e seu impacto emocional e legado na história da música. Responda em português do Brasil, em um único parágrafo longo.`;
-        
+    
         try {
-            const history = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: history };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
+            const response = await fetch('http://localhost:5001/api/gemini', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ prompt: prompt })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Falha na resposta do servidor.");
+            }
+    
             const result = await response.json();
             if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
                 setGeneratedAnalysis(result.candidates[0].content.parts[0].text);
             } else {
-                setGeneratedAnalysis("Não foi possível gerar a análise. Verifique sua chave de API ou a resposta do servidor.");
+                setGeneratedAnalysis("Não foi possível gerar a análise a partir da resposta da API.");
             }
         } catch (error) {
-            console.error("Erro ao chamar a API Gemini:", error);
-            setGeneratedAnalysis("Ocorreu um erro de conexão ao tentar gerar a análise.");
+            console.error("Erro ao chamar o backend:", error);
+            setGeneratedAnalysis(`Ocorreu um erro ao tentar gerar a análise: ${error.message}`);
         } finally {
             setIsAnalysisLoading(false);
         }
@@ -80,23 +83,27 @@ const DetailModal = ({ content, onClose }) => {
     const handleChatSubmit = async (e) => {
         e.preventDefault();
         if (!chatInput.trim() || isChatLoading) return;
-
+    
         const newHistory = [...chatHistory, { role: 'user', text: chatInput }];
         setChatHistory(newHistory);
+        const userInput = chatInput;
         setChatInput('');
         setIsChatLoading(true);
-
-        const prompt = `Você é ${content.data.name}, o compositor. Responda à pergunta do usuário da sua perspectiva, usando sua personalidade conhecida, contexto histórico e um tom apropriado para a sua época. Mantenha as respostas relativamente concisas. A pergunta do usuário é: "${chatInput}"`;
+    
+        const prompt = `Você é ${content.data.name}, o compositor. Responda à pergunta do usuário da sua perspectiva, usando sua personalidade conhecida, contexto histórico e um tom apropriado para a sua época. Mantenha as respostas relativamente concisas. A pergunta do usuário é: "${userInput}"`;
         
         try {
-            const historyForApi = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { contents: historyForApi };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
+            const response = await fetch('http://localhost:5001/api/gemini', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ prompt: prompt })
             });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Falha na resposta do servidor.");
+            }
+    
             const result = await response.json();
             let botResponse = "Desculpe, não consegui pensar em uma resposta neste momento.";
             if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
@@ -104,14 +111,15 @@ const DetailModal = ({ content, onClose }) => {
             }
             setChatHistory(prev => [...prev, { role: 'bot', text: botResponse }]);
         } catch (error) {
-            console.error("Erro ao chamar a API Gemini para chat:", error);
-            setChatHistory(prev => [...prev, { role: 'bot', text: "Houve um erro de conexão. Minhas desculpas." }]);
+            console.error("Erro ao chamar o backend para chat:", error);
+            setChatHistory(prev => [...prev, { role: 'bot', text: `Houve um erro de conexão: ${error.message}` }]);
         } finally {
             setIsChatLoading(false);
         }
     };
 
     const renderDetails = () => {
+        // ... (o conteúdo desta função permanece inalterado)
         switch (type) {
             // ### INÍCIO DA ÁREA MODIFICADA ###
             case 'composer':
