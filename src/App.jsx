@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { musicHistoryData } from './data/musicHistoryData';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import AnimatedBackground from './components/AnimatedBackground';
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
 import Sidebar from './components/sidebar';
@@ -140,8 +139,6 @@ Responda em português do Brasil.`;
                 .scrollbar-thin::-webkit-scrollbar-thumb { background: #a38b71; border-radius: 10px; }
                 .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #c0a58a; }
             `}</style>
-
-            <AnimatedBackground />
             
             <AnimatePresence>
                 {isLoading ? (

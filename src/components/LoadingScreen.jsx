@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import AnimatedBackground from './AnimatedBackground';
 
 const LoadingScreen = () => {
     return (
@@ -10,8 +9,6 @@ const LoadingScreen = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
         >
-            {/* O fundo animado é renderizado aqui para ser contínuo durante a transição */}
-            <AnimatedBackground /> 
             
             <motion.h1
                 className="text-4xl lg:text-6xl font-title gold-text-effect text-shadow-gold z-10"
