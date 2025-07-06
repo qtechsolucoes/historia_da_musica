@@ -71,7 +71,13 @@ export default function App() {
     const handleGenerateQuiz = async () => {
         setQuiz({ question: '', options: [], answer: '', feedback: '', isLoading: true });
         const composerNames = selectedPeriod.composers.map(c => c.name).join(', ');
-        const prompt = `Aja como um professor de história da música. Crie uma pergunta de múltipla escolha sobre a biografia ou uma obra importante de um dos seguintes compositores do período ${selectedPeriod.name}: ${composerNames}. Forneça a pergunta, quatro opções (sendo uma correta e três incorretas, mas plausíveis) e a resposta correta em um formato específico.
+        const prompt = `Aja como um professor de história da música. Crie uma pergunta de múltipla escolha sobre a biografia ou uma obra importante de um dos seguintes compositores do período ${selectedPeriod.name}: ${composerNames}. 
+        Forneça a pergunta, quatro opções (sendo uma correta e três incorretas, mas plausíveis) e a resposta correta em um formato específico. 
+        Atenção, para cada pergunta que você criar, o texto deverá começar com uma letra indicando a alternativa. Cada alternativa deverá ser não muito pequena, mas também não muito grande, e deve ser escrita de forma que a resposta correta não seja óbvia.
+        O texto da pergunta deve ser claro e direto, e as opções devem ser variadas em conteúdo e estilo, mas todas relacionadas ao tema da pergunta. 
+        Evite perguntas excessivamente complexas ou que exijam conhecimento especializado além do que seria esperado para um estudante de história da música.
+        O texto deve ser escrito em português do Brasil, e as opções devem ser apresentadas de forma clara e distinta, com a resposta correta claramente identificada. 
+        O texto deve ser escrito de forma que seja fácil de entender, evitando jargões técnicos ou termos excessivamente complicados.
 
 Formato Exigido:
 PERGUNTA: [Texto da pergunta aqui]
