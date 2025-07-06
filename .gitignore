@@ -6,6 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+# Ignorar arquivos de ambiente do backend
+backend/.env
 
 node_modules
 dist
