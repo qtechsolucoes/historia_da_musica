@@ -30,7 +30,7 @@ mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado ao MongoDB com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// --- ROTAS DA API ---
+// --- ROTAS DA API --- (As rotas existentes permanecem as mesmas)
 
 app.post('/api/auth/google',
     body('token').isString().notEmpty(),
@@ -116,6 +116,7 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 });
 
+
 // --- LÓGICA DO WEBSOCKET ---
 let battleQueue = [];
 let activeBattles = {};
@@ -136,6 +137,20 @@ async function generateBattleQuestion(periodId) {
         answer: correctWork
     };
 }
+
+const endBattle = async (battleId, winnerId, loserId) => {
+    const winner = await User.findById(winnerId);
+    if (winner) {
+        winner.score += 25; // Prémio de 25 pontos
+        // Adicionar estatísticas de vitória, etc.
+        await winner.save();
+    }
+    // Lógica para o perdedor, se necessário
+    
+    io.to(battleId).emit('game_over', { winner: winner.name, prize: 25 });
+    delete activeBattles[battleId];
+};
+
 
 io.on('connection', (socket) => {
     console.log(`[Socket.IO] Usuário conectado: ${socket.id}`);
@@ -174,10 +189,11 @@ io.on('connection', (socket) => {
                 ],
                 scores: { [p1Socket.id]: 0, [p2Socket.id]: 0 },
                 periodId: p1Socket.periodId,
-                answers: {}
+                answers: {},
+                endGameRequests: new Set()
             };
             
-            io.to(battleId).emit('battle_found', { battleId, players: activeBattles[battleId].players });
+            io.to(battleId).emit('battle_found', { battleId, players: activeBattles[battleId].players, scores: activeBattles[battleId].scores });
             console.log(`[Socket.IO] Evento 'battle_found' emitido para a sala ${battleId}.`);
 
             generateBattleQuestion(activeBattles[battleId].periodId)
@@ -226,13 +242,54 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('request_end_game', ({ battleId }) => {
+        const battle = activeBattles[battleId];
+        if (!battle) return;
+        
+        battle.endGameRequests.add(socket.id);
+        const opponent = battle.players.find(p => p.id !== socket.id);
+
+        if (opponent) {
+            io.to(opponent.id).emit('confirm_end_game', { requesterName: socket.user.name });
+        }
+    });
+
+    socket.on('accept_end_game', ({ battleId }) => {
+        const battle = activeBattles[battleId];
+        if (!battle) return;
+
+        const p1 = battle.players[0];
+        const p2 = battle.players[1];
+        const p1Score = battle.scores[p1.id];
+        const p2Score = battle.scores[p2.id];
+
+        let winnerId, loserId;
+        if (p1Score > p2Score) {
+            winnerId = p1.user._id;
+            loserId = p2.user._id;
+        } else if (p2Score > p1Score) {
+            winnerId = p2.user._id;
+            loserId = p1.user._id;
+        } else {
+            // Empate: ambos ganham um prémio menor ou ninguém ganha
+            io.to(battleId).emit('game_over', { winner: 'Empate', prize: 5 });
+            delete activeBattles[battleId];
+            return;
+        }
+        endBattle(battleId, winnerId, loserId);
+    });
+
     socket.on('disconnect', () => {
         console.log(`[Socket.IO] Usuário desconectado: ${socket.id}`);
         battleQueue = battleQueue.filter(s => s.id !== socket.id);
         for (const battleId in activeBattles) {
             const playerIndex = activeBattles[battleId].players.findIndex(p => p.id === socket.id);
             if (playerIndex !== -1) {
-                console.log(`[Socket.IO] Jogador desconectou da batalha ${battleId}`);
+                console.log(`[Socket.IO] Jogador ${socket.user.name} desconectou da batalha ${battleId}`);
+                
+                // Lógica de penalidade
+                User.findOneAndUpdate({ email: socket.user.email }, { $inc: { score: -5 } }).exec();
+                
                 const opponent = activeBattles[battleId].players[1 - playerIndex];
                 if (opponent) {
                      io.to(opponent.id).emit('opponent_disconnected');
