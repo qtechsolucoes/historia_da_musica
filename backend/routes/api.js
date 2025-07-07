@@ -1,0 +1,144 @@
+require('dotenv').config();
+const express = require('express');
+const { body, validationResult } = require('express-validator');
+const { OAuth2Client } = require('google-auth-library');
+const rateLimit = require('express-rate-limit');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const User = require('../models/User');
+
+const router = express.Router();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// --- Middlewares ---
+
+// Limitador de requisições para proteger contra ataques de força bruta
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Limita cada IP a 100 requisições por janela
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Demasiadas requisições deste IP, por favor tente novamente após 15 minutos.'
+});
+
+// Aplica o limitador a todas as rotas deste router
+router.use(apiLimiter);
+
+// --- Rotas ---
+
+// Rota de Autenticação
+router.post('/auth/google',
+    body('token').isString().notEmpty(),
+    async (req, res) => {
+        try {
+            const ticket = await client.verifyIdToken({ idToken: req.body.token, audience: process.env.GOOGLE_CLIENT_ID });
+            const { name, email, picture } = ticket.getPayload();
+            let user = await User.findOne({ email });
+            if (!user) {
+                user = new User({
+                    name,
+                    email,
+                    picture,
+                    score: 0,
+                    achievements: [],
+                    stats: {
+                        quizzesCompleted: 0,
+                        correctAnswers: 0,
+                        incorrectAnswers: 0,
+                        periodsVisited: new Map(),
+                        favoritePeriod: 'Nenhum'
+                    }
+                });
+                await user.save();
+            }
+            res.status(200).json(user);
+        } catch (error) {
+            console.error("Erro na autenticação do Google:", error);
+            res.status(400).json({ error: "Falha na autenticação" });
+        }
+    }
+);
+
+// Rota de Pontuação
+router.post('/score',
+    body('email').isEmail().normalizeEmail(),
+    body('score').isNumeric(),
+    body('statsUpdate').isObject().optional(),
+    async (req, res) => {
+        const { email, score, statsUpdate } = req.body;
+        try {
+            const user = await User.findOne({ email });
+            if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+            user.score = score;
+            if (statsUpdate) {
+                user.stats.quizzesCompleted = (user.stats.quizzesCompleted || 0) + (statsUpdate.quizzesCompleted || 0);
+                user.stats.correctAnswers = (user.stats.correctAnswers || 0) + (statsUpdate.correctAnswers || 0);
+                user.stats.incorrectAnswers = (user.stats.incorrectAnswers || 0) + (statsUpdate.incorrectAnswers || 0);
+            }
+            const updatedUser = await user.save();
+            res.status(200).json(updatedUser);
+        } catch (error) {
+            res.status(500).json({ error: "Erro ao atualizar pontuação" });
+        }
+    }
+);
+
+// Rota de Conquistas
+router.post('/achievements',
+    body('email').isEmail().normalizeEmail(),
+    body('achievement').isObject(),
+    async (req, res) => {
+        const { email, achievement } = req.body;
+        try {
+            const user = await User.findOneAndUpdate(
+                { email, 'achievements.name': { $ne: achievement.name } },
+                { $push: { achievements: achievement } },
+                { new: true }
+            );
+            if (!user) return res.status(200).send("Usuário não encontrado ou conquista já existe.");
+            res.status(200).json(user);
+        } catch (error) {
+            res.status(500).json({ error: "Erro ao adicionar conquista" });
+        }
+    }
+);
+
+// Rota do Ranking
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const topPlayers = await User.find().sort({ score: -1 }).limit(10);
+        res.status(200).json(topPlayers);
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao buscar o ranking" });
+    }
+});
+
+// Rota para a IA Generativa
+router.post('/gemini', 
+    body('prompt').isString().notEmpty(),
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+            const prompt = req.body.prompt;
+            
+            const result = await model.generateContent(prompt);
+            const response = result.response;
+            const text = await response.text();
+            
+            res.status(200).json({ candidates: [{ content: { parts: [{ text: text }] } }] });
+
+        } catch (error) {
+            console.error("Erro ao chamar a API Gemini:", error);
+            res.status(500).json({ error: "Ocorreu um erro ao processar a sua solicitação com a IA." });
+        }
+    }
+);
+
+module.exports = router;

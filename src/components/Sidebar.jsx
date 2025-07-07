@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
-import './Sidebar.css';
+// A importação do CSS foi removida: import './Sidebar.css';
 
 const Sidebar = ({ 
     periods, 
@@ -57,6 +57,7 @@ const Sidebar = ({
 
     return (
         <aside className="w-64 bg-black/30 backdrop-blur-md border-r-2 border-amber-900/50 flex flex-col flex-shrink-0">
+            {/* O cabeçalho e a navegação permanecem os mesmos */}
             <header className="text-center p-4 border-b-2 border-amber-900/50">
                 <h1 className="text-2xl lg:text-3xl font-title gold-text-effect" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
                     Codex Historiæ Musicæ
@@ -136,6 +137,7 @@ const Sidebar = ({
                 </ul>
             </nav>
 
+            {/* ### INÍCIO DA ÁREA MODIFICADA ### */}
             <div className="p-4 border-t-2 border-amber-900/50 space-y-3">
                 <div className='flex items-center justify-center gap-4'>
                      <button onClick={handlePlayPause} className="p-2 rounded-full bg-amber-400/20 hover:bg-amber-400/40 text-amber-200 transition-colors">
@@ -157,12 +159,14 @@ const Sidebar = ({
                         aria-label="Volume"
                     />
                 </div>
-                <div className="now-playing-container">
-                    <p className="now-playing-text">
+                {/* O container e o texto agora usam classes do Tailwind */}
+                <div className="w-full overflow-hidden whitespace-nowrap box-border">
+                    <p className="inline-block animate-marquee text-amber-200 text-sm">
                         {isPlaying && selectedPeriod ? `Tocando agora: ${selectedPeriod.referenceSongTitle}` : 'Player pausado'}
                     </p>
                 </div>
             </div>
+            {/* ### FIM DA ÁREA MODIFICADA ### */}
 
             <audio ref={audioRef} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} loop/>
         </aside>
