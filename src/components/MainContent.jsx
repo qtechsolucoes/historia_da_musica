@@ -73,6 +73,14 @@ const MainContent = ({
 }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [timelineItems, setTimelineItems] = useState(timeline.items);
+    
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('name'); // 'name' ou 'composer'
+
+    useEffect(() => {
+        setSearchTerm('');
+        setSortBy('name');
+    }, [activeTab]);
 
     useEffect(() => {
         setTimelineItems(timeline.items);
@@ -108,17 +116,56 @@ const MainContent = ({
         if (!Array.isArray(items) || items.length === 0) {
             return <div className="text-stone-400 p-4 text-center">Conteúdo não disponível para esta seção.</div>;
         }
+
+        const filteredItems = items.filter(item => 
+            (item.name || item.title).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        const sortedItems = [...filteredItems].sort((a, b) => {
+            if (sortBy === 'year' && type === 'composer' && a.lifespan && b.lifespan) {
+                const yearA = parseInt(a.lifespan.split(/–|-/)[0].replace(/[^0-9]/g, ''));
+                const yearB = parseInt(b.lifespan.split(/–|-/)[0].replace(/[^0-9]/g, ''));
+                return yearA - yearB;
+            }
+            return (a.name || a.title).localeCompare(b.name || b.title);
+        });
+
         return (
-            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {items.map((item, index) => (
-                    <InfoCard 
-                        key={`${type}-${item.name || item.title}-${index}`}
-                        item={item} 
-                        type={type} 
-                        onCardClick={onCardClick}
+            <>
+                <div className="mb-6 p-4 bg-black/20 rounded-lg border border-amber-900/50 flex flex-col sm:flex-row gap-4">
+                    <input 
+                        type="text"
+                        placeholder={`Pesquisar por nome...`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-grow p-2 bg-gray-800 text-white border border-amber-800/50 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
-                ))}
-            </motion.div>
+                    {type === 'composer' && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-stone-300 text-sm">Ordenar por:</span>
+                            <button onClick={() => setSortBy('name')} className={`px-3 py-1 text-sm rounded-md transition-colors ${sortBy === 'name' ? 'bg-amber-500 text-black font-bold' : 'bg-gray-700 text-stone-200 hover:bg-gray-600'}`}>Nome</button>
+                            <button onClick={() => setSortBy('year')} className={`px-3 py-1 text-sm rounded-md transition-colors ${sortBy === 'year' ? 'bg-amber-500 text-black font-bold' : 'bg-gray-700 text-stone-200 hover:bg-gray-600'}`}>Ano</button>
+                        </div>
+                    )}
+                </div>
+
+                {sortedItems.length > 0 ? (
+                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                        <AnimatePresence>
+                            {sortedItems.map((item, index) => (
+                                <InfoCard 
+                                    key={`${type}-${item.name || item.title}`}
+                                    item={item} 
+                                    type={type} 
+                                    onCardClick={onCardClick}
+                                />
+                            ))}
+                        </AnimatePresence>
+                    </motion.div>
+                ) : (
+                    <div className="text-stone-400 p-8 text-center bg-black/20 rounded-lg">Nenhum resultado encontrado para "{searchTerm}".</div>
+                )}
+            </>
         );
     };
 
@@ -126,24 +173,60 @@ const MainContent = ({
         if (!Array.isArray(items) || items.length === 0) {
             return <div className="text-stone-400 p-4 text-center">Conteúdo não disponível para esta seção.</div>;
         }
-        const groupedWorks = items.reduce((acc, work) => {
+
+        // --- INÍCIO DA MELHORIA PARA OBRAS ---
+        const filteredItems = items.filter(item => 
+            item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.composer.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        const sortedItems = [...filteredItems].sort((a, b) => {
+            if (sortBy === 'composer') {
+                return a.composer.localeCompare(b.composer);
+            }
+            // Ordenação padrão por título
+            return a.title.localeCompare(b.title);
+        });
+
+        const groupedWorks = sortedItems.reduce((acc, work) => {
             const category = work.category || 'Outras Obras';
             if (!acc[category]) acc[category] = [];
             acc[category].push(work);
             return acc;
         }, {});
+        // --- FIM DA MELHORIA PARA OBRAS ---
+
         return (
             <div className="space-y-8 max-w-6xl mx-auto">
-                {Object.entries(groupedWorks).map(([category, works]) => (
-                    <motion.div key={category} layout>
-                        <h3 className="text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {works.map((work, index) => (
-                                <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
-                            ))}
-                        </div>
-                    </motion.div>
-                ))}
+                <div className="mb-6 p-4 bg-black/20 rounded-lg border border-amber-900/50 flex flex-col sm:flex-row gap-4">
+                    <input 
+                        type="text"
+                        placeholder={`Pesquisar por obra ou compositor...`}
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-grow p-2 bg-gray-800 text-white border border-amber-800/50 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-stone-300 text-sm">Ordenar por:</span>
+                        <button onClick={() => setSortBy('name')} className={`px-3 py-1 text-sm rounded-md transition-colors ${sortBy === 'name' ? 'bg-amber-500 text-black font-bold' : 'bg-gray-700 text-stone-200 hover:bg-gray-600'}`}>Título</button>
+                        <button onClick={() => setSortBy('composer')} className={`px-3 py-1 text-sm rounded-md transition-colors ${sortBy === 'composer' ? 'bg-amber-500 text-black font-bold' : 'bg-gray-700 text-stone-200 hover:bg-gray-600'}`}>Compositor</button>
+                    </div>
+                </div>
+
+                {Object.keys(groupedWorks).length > 0 ? (
+                    Object.entries(groupedWorks).map(([category, works]) => (
+                        <motion.div key={category} layout>
+                            <h3 className="text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {works.map((work, index) => (
+                                    <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
+                                ))}
+                            </div>
+                        </motion.div>
+                    ))
+                ) : (
+                    <div className="text-stone-400 p-8 text-center bg-black/20 rounded-lg">Nenhum resultado encontrado para "{searchTerm}".</div>
+                )}
             </div>
         );
     };
@@ -246,7 +329,6 @@ const MainContent = ({
                     </motion.div>
                 );
             
-            // <-- INÍCIO DO CÓDIGO CORRIGIDO -->
             case 'fromWhichPeriod':
                 return (
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
@@ -282,7 +364,6 @@ const MainContent = ({
                         )}
                     </motion.div>
                 );
-            // <-- FIM DO CÓDIGO CORRIGIDO -->
 
             case 'ranking':
                 return (
@@ -321,7 +402,6 @@ const MainContent = ({
                         <BattleMode user={user} socket={socket} period={period} onBack={goBackToHub} />
                     </motion.div>
                 );
-
 
             default: return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
         }
