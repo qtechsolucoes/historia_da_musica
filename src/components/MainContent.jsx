@@ -4,7 +4,7 @@ import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
-import BattleMode from './BattleMode'; // Importado
+import BattleMode from './BattleMode'; 
 
 const ChallengeHub = ({ setActiveChallenge }) => (
     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-5xl mx-auto text-center">
@@ -30,6 +30,11 @@ const ChallengeHub = ({ setActiveChallenge }) => (
                 <Clock size={32} className="mb-2 text-amber-400"/>
                 <h3 className="text-xl font-bold text-amber-300 font-serif">Linha do Tempo</h3>
                 <p className="text-stone-400 mt-2 text-sm">Ordene os compositores cronologicamente.</p>
+            </button>
+            <button onClick={() => setActiveChallenge('fromWhichPeriod')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+                <BrainCircuit size={32} className="mb-2 text-amber-400"/>
+                <h3 className="text-xl font-bold text-amber-300 font-serif">De Que Período?</h3>
+                <p className="text-stone-400 mt-2 text-sm">Identifique o período musical pela descrição.</p>
             </button>
             <button onClick={() => setActiveChallenge('battle')} className="p-6 bg-gray-800/50 rounded-lg border border-blue-800/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center">
                 <Swords size={32} className="mb-2 text-blue-400"/>
@@ -59,6 +64,9 @@ const MainContent = ({
     timeline,
     onGenerateTimeline,
     onCheckTimeline,
+    fromWhichPeriod,
+    onGenerateFromWhichPeriod,
+    onFromWhichPeriodGuess,
     leaderboard,
     user,
     socket
@@ -237,6 +245,44 @@ const MainContent = ({
                         {timeline.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-center">{timeline.feedback}</p>}
                     </motion.div>
                 );
+            
+            // <-- INÍCIO DO CÓDIGO CORRIGIDO -->
+            case 'fromWhichPeriod':
+                return (
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                        <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
+                        <h2 className="text-3xl mb-4 text-amber-300 font-title">De Que Período?</h2>
+                        
+                        <p className="text-stone-400 mb-4">Leia a descrição e escolha o período musical correto.</p>
+
+                        <button onClick={onGenerateFromWhichPeriod} disabled={fromWhichPeriod.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                            <Sparkles size={18} />
+                            {fromWhichPeriod.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
+                        </button>
+                        
+                        {fromWhichPeriod.isLoading && <LoadingSpinner />}
+                        
+                        {fromWhichPeriod.description && !fromWhichPeriod.isLoading && (
+                            <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
+                                <p className="text-stone-300 text-lg italic font-semibold mb-4 text-center">"{fromWhichPeriod.description}"</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {fromWhichPeriod.options.map((option, index) => (
+                                        <button 
+                                            key={index} 
+                                            onClick={() => onFromWhichPeriodGuess(option)} 
+                                            disabled={!!fromWhichPeriod.feedback}
+                                            className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, fromWhichPeriod.answer, fromWhichPeriod.guessedOption, fromWhichPeriod.feedback)} disabled:cursor-not-allowed`}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                </div>
+                                {fromWhichPeriod.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-center">{fromWhichPeriod.feedback}</p>}
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            // <-- FIM DO CÓDIGO CORRIGIDO -->
 
             case 'ranking':
                 return (

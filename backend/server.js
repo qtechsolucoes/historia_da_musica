@@ -6,6 +6,7 @@ const { OAuth2Client } = require('google-auth-library');
 const { body, validationResult } = require('express-validator');
 const http = require('http');
 const { Server } = require("socket.io");
+const { GoogleGenerativeAI } = require("@google/generative-ai"); // <-- CORREÇÃO: Importado
 
 const User = require('./models/User');
 const { musicHistoryData } = require('./data.js');
@@ -18,7 +19,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: "http://localhost:5173", // Certifique-se que a porta está correta para o seu frontend Vite
         methods: ["GET", "POST"]
     }
 });
@@ -26,11 +27,15 @@ const io = new Server(server, {
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const PORT = process.env.PORT || 5001;
 
+// --- CORREÇÃO: Inicialização do cliente Gemini ---
+// Certifique-se que sua chave está no arquivo .env
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY); 
+
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado ao MongoDB com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// --- ROTAS DA API --- (As rotas existentes permanecem as mesmas)
+// --- ROTAS DA API ---
 
 app.post('/api/auth/google',
     body('token').isString().notEmpty(),
@@ -115,6 +120,33 @@ app.get('/api/leaderboard', async (req, res) => {
         res.status(500).json({ error: "Erro ao buscar o ranking" });
     }
 });
+
+// --- CORREÇÃO: Nova Rota para a IA Generativa ---
+app.post('/api/gemini', 
+    body('prompt').isString().notEmpty(),
+    async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+            const prompt = req.body.prompt;
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            
+            // Retorna a resposta da IA no formato que o frontend espera
+            res.status(200).json({ candidates: [{ content: { parts: [{ text: response.text() }] } }] });
+
+        } catch (error) {
+            console.error("Erro ao chamar a API Gemini:", error);
+            // Retorna um erro em formato JSON, que o frontend pode tratar
+            res.status(500).json({ error: "Ocorreu um erro ao processar a sua solicitação." });
+        }
+    }
+);
 
 
 // --- LÓGICA DO WEBSOCKET ---
@@ -285,10 +317,12 @@ io.on('connection', (socket) => {
         for (const battleId in activeBattles) {
             const playerIndex = activeBattles[battleId].players.findIndex(p => p.id === socket.id);
             if (playerIndex !== -1) {
-                console.log(`[Socket.IO] Jogador ${socket.user.name} desconectou da batalha ${battleId}`);
+                console.log(`[Socket.IO] Jogador ${socket.user?.name || 'desconhecido'} desconectou da batalha ${battleId}`);
                 
-                // Lógica de penalidade
-                User.findOneAndUpdate({ email: socket.user.email }, { $inc: { score: -5 } }).exec();
+                if (socket.user && socket.user.email) {
+                    // Lógica de penalidade
+                    User.findOneAndUpdate({ email: socket.user.email }, { $inc: { score: -5 } }).exec();
+                }
                 
                 const opponent = activeBattles[battleId].players[1 - playerIndex];
                 if (opponent) {

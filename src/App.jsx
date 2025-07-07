@@ -31,6 +31,7 @@ export default function App() {
     const [quiz, setQuiz] = useState({ question: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
     const [whoAmI, setWhoAmI] = useState({ description: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
     const [timeline, setTimeline] = useState({ items: [], correctOrder: [], feedback: '', isLoading: false, isChecked: false });
+    const [fromWhichPeriod, setFromWhichPeriod] = useState({ description: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
 
     const [currentUser, setCurrentUser] = useState(null);
     const [score, setScore] = useState(0);
@@ -338,6 +339,65 @@ Responda em português do Brasil.`;
         }
     };
 
+    // <-- INÍCIO DO CÓDIGO CORRIGIDO -->
+    const handleGenerateFromWhichPeriod = async () => {
+        setFromWhichPeriod({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
+    
+        // 1. SORTEIA UM PERÍODO ALEATÓRIO
+        const randomPeriod = musicHistoryData[Math.floor(Math.random() * musicHistoryData.length)];
+        const periodName = randomPeriod.name;
+    
+        const prompt = `Aja como um historiador da música criando um desafio. Gere uma descrição de 2 a 3 frases sobre uma característica, obra, compositor ou instrumento marcante do período da "${periodName}". A descrição deve ser enigmática, sem mencionar o nome do período. O objetivo é que o jogador adivinhe o período.
+
+    Exemplo para o período Barroco: "Minhas composições são conhecidas pelo drama e pela grandiosidade, utilizando o baixo contínuo e explorando o contraste entre solistas e a orquestra em uma forma musical chamada concerto."
+
+    Responda apenas com a descrição, em português do Brasil.`;
+    
+        try {
+            const response = await fetch(`${backendUrl}/api/gemini`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            });
+            
+            if (!response.ok) throw new Error("Falha ao comunicar com a IA.");
+    
+            const result = await response.json();
+            const description = result.candidates[0]?.content?.parts[0]?.text;
+    
+            if (description) {
+                setFromWhichPeriod({
+                    description: description.trim(),
+                    // As opções são sempre os nomes de todos os períodos
+                    options: musicHistoryData.map(p => p.name).sort(() => 0.5 - Math.random()), 
+                    answer: periodName, // 2. A RESPOSTA CORRETA É O PERÍODO SORTEADO
+                    isLoading: false,
+                    feedback: '',
+                    guessedOption: null
+                });
+            } else {
+                throw new Error("A API não retornou uma descrição.");
+            }
+        } catch (error) {
+            console.error("Erro ao gerar 'De Que Período?':", error);
+            setFromWhichPeriod(prev => ({...prev, isLoading: false, description: "Não foi possível criar o desafio. Tente novamente."}));
+        }
+    };
+
+    const handleFromWhichPeriodGuess = (guess) => {
+        const isCorrect = guess === fromWhichPeriod.answer;
+        let feedbackMessage = isCorrect ? 'Correto! Você sabe identificar as eras da música.' : `Incorreto. A resposta correta era: ${fromWhichPeriod.answer}.`;
+        
+        if (isCorrect) {
+            handleCorrectAnswer();
+        } else {
+            handleIncorrectAnswer();
+        }
+    
+        setFromWhichPeriod(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
+    };
+    // <-- FIM DO CÓDIGO CORRIGIDO -->
+
     return (
         <GoogleOAuthProvider clientId={googleClientId}>
             <div className="h-screen w-screen bg-gray-900">
@@ -397,6 +457,9 @@ Responda em português do Brasil.`;
                                         timeline={timeline}
                                         onGenerateTimeline={handleGenerateTimeline}
                                         onCheckTimeline={handleCheckTimeline}
+                                        fromWhichPeriod={fromWhichPeriod}
+                                        onGenerateFromWhichPeriod={handleGenerateFromWhichPeriod}
+                                        onFromWhichPeriodGuess={handleFromWhichPeriodGuess}
                                         leaderboard={leaderboard}
                                         user={currentUser}
                                         socket={socket}
