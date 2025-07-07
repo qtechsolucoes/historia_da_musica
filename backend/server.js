@@ -4,120 +4,244 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
 const { body, validationResult } = require('express-validator');
-const axios = require('axios');
+const http = require('http');
+const { Server } = require("socket.io");
 
 const User = require('./models/User');
+const { musicHistoryData } = require('./data.js');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const server = http.createServer(app);
+
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173",
+        methods: ["GET", "POST"]
+    }
+});
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const PORT = process.env.PORT || 5001;
 
-// Conectar ao MongoDB
 mongoose.connect(process.env.DATABASE_URL)
     .then(() => console.log('Conectado ao MongoDB com sucesso!'))
     .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
-// --- ROTA DE AUTENTICAÇÃO ---
+// --- ROTAS DA API ---
+
 app.post('/api/auth/google',
-    body('token').isString().notEmpty().withMessage('O token é obrigatório.'),
+    body('token').isString().notEmpty(),
     async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        const { token } = req.body;
         try {
-            const ticket = await client.verifyIdToken({
-                idToken: token,
-                audience: process.env.GOOGLE_CLIENT_ID,
-            });
+            const ticket = await client.verifyIdToken({ idToken: req.body.token, audience: process.env.GOOGLE_CLIENT_ID });
             const { name, email, picture } = ticket.getPayload();
-
             let user = await User.findOne({ email });
-
             if (!user) {
-                user = new User({ name, email, picture, score: 0 });
+                user = new User({
+                    name,
+                    email,
+                    picture,
+                    score: 0,
+                    achievements: [],
+                    stats: {
+                        quizzesCompleted: 0,
+                        correctAnswers: 0,
+                        incorrectAnswers: 0,
+                        periodsVisited: new Map(),
+                        favoritePeriod: 'Nenhum'
+                    }
+                });
                 await user.save();
             }
-
             res.status(200).json(user);
         } catch (error) {
             console.error("Erro na autenticação do Google:", error);
-            res.status(400).json({ error: "Falha na autenticação do Google" });
+            res.status(400).json({ error: "Falha na autenticação" });
         }
     }
 );
 
-// --- ROTA PARA ATUALIZAR PONTUAÇÃO ---
 app.post('/api/score',
-    body('email').isEmail().withMessage('Formato de email inválido.').normalizeEmail(),
-    body('score').isNumeric().withMessage('A pontuação deve ser um número.'),
+    body('email').isEmail().normalizeEmail(),
+    body('score').isNumeric(),
+    body('statsUpdate').isObject().optional(),
     async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        const { email, score } = req.body;
+        const { email, score, statsUpdate } = req.body;
         try {
-            const user = await User.findOneAndUpdate({ email }, { score }, { new: true });
-            if (!user) {
-                return res.status(404).json({ error: "Usuário não encontrado" });
+            const user = await User.findOne({ email });
+            if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+
+            user.score = score;
+            if (statsUpdate) {
+                user.stats.quizzesCompleted = (user.stats.quizzesCompleted || 0) + (statsUpdate.quizzesCompleted || 0);
+                user.stats.correctAnswers = (user.stats.correctAnswers || 0) + (statsUpdate.correctAnswers || 0);
+                user.stats.incorrectAnswers = (user.stats.incorrectAnswers || 0) + (statsUpdate.incorrectAnswers || 0);
             }
-            res.status(200).json(user);
+            const updatedUser = await user.save();
+            res.status(200).json(updatedUser);
         } catch (error) {
             res.status(500).json({ error: "Erro ao atualizar pontuação" });
         }
     }
 );
 
-// --- ROTA PARA O RANKING (LEADERBOARD) ---
+app.post('/api/achievements',
+    body('email').isEmail().normalizeEmail(),
+    body('achievement').isObject(),
+    async (req, res) => {
+        const { email, achievement } = req.body;
+        try {
+            const user = await User.findOneAndUpdate(
+                { email, 'achievements.name': { $ne: achievement.name } },
+                { $push: { achievements: achievement } },
+                { new: true }
+            );
+            if (!user) return res.status(200).send("Usuário não encontrado ou conquista já existe.");
+            res.status(200).json(user);
+        } catch (error) {
+            res.status(500).json({ error: "Erro ao adicionar conquista" });
+        }
+    }
+);
+
 app.get('/api/leaderboard', async (req, res) => {
     try {
-        const topPlayers = await User.find().sort({ score: -1 }).limit(5);
+        const topPlayers = await User.find().sort({ score: -1 }).limit(10);
         res.status(200).json(topPlayers);
     } catch (error) {
         res.status(500).json({ error: "Erro ao buscar o ranking" });
     }
 });
 
-// --- ROTA DE PROXY PARA A API GEMINI ---
-app.post('/api/gemini', async (req, res) => {
-    const { prompt } = req.body;
+// --- LÓGICA DO WEBSOCKET ---
+let battleQueue = [];
+let activeBattles = {};
 
-    if (!prompt) {
-        return res.status(400).json({ error: "O prompt é obrigatório." });
+async function generateBattleQuestion(periodId) {
+    const period = musicHistoryData.find(p => p.id === periodId);
+    if (!period || !period.composers || period.composers.length === 0) {
+        throw new Error("Dados de período inválidos para gerar pergunta.");
     }
+    const randomComposer = period.composers[Math.floor(Math.random() * period.composers.length)];
+    const correctWork = randomComposer.majorWorks[0] || 'Obra Desconhecida';
+    const fakeWorks = ['Sonata ao Luar', 'A Flauta Mágica', 'Sinfonia do Novo Mundo', 'Para Elisa'].filter(w => w !== correctWork);
+    const options = [correctWork, ...fakeWorks.slice(0, 3)].sort(() => 0.5 - Math.random());
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-         return res.status(500).json({ error: "A chave da API Gemini não está configurada no servidor." });
-    }
+    return {
+        question: `Qual destas obras é de ${randomComposer.name}?`,
+        options: options,
+        answer: correctWork
+    };
+}
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+io.on('connection', (socket) => {
+    console.log(`[Socket.IO] Usuário conectado: ${socket.id}`);
 
-    try {
-        const payload = {
-            contents: [{ role: "user", parts: [{ text: prompt }] }]
-        };
+    socket.on('find_battle', ({ user, periodId }) => {
+        if (!user || !user.email) {
+            console.log(`[Socket.IO] Tentativa de 'find_battle' com usuário inválido do socket ${socket.id}.`);
+            return;
+        }
 
-        const geminiResponse = await axios.post(apiUrl, payload, {
-            headers: { 'Content-Type': 'application/json' }
-        });
+        console.log(`[Socket.IO] ${user.name} está procurando uma batalha para o período: ${periodId}`);
+        socket.user = user;
+        socket.periodId = periodId;
+
+        if (battleQueue.some(s => s.user.email === user.email)) {
+            console.log(`[Socket.IO] ${user.name} já está na fila.`);
+            return;
+        }
         
-        res.status(200).json(geminiResponse.data);
+        battleQueue.push(socket);
+        console.log(`[Socket.IO] Fila de espera agora tem: ${battleQueue.length} jogador(es).`);
 
-    } catch (error) {
-        console.error("Erro ao chamar a API Gemini:", error.response ? error.response.data : error.message);
-        res.status(500).json({ error: "Falha ao se comunicar com a API Gemini." });
-    }
+        if (battleQueue.length >= 2) {
+            const p1Socket = battleQueue.shift();
+            const p2Socket = battleQueue.shift();
+            const battleId = `battle_${p1Socket.id}_${p2Socket.id}`;
+            console.log(`[Socket.IO] Formando batalha ${battleId} entre ${p1Socket.user.name} e ${p2Socket.user.name}`);
+
+            p1Socket.join(battleId);
+            p2Socket.join(battleId);
+
+            activeBattles[battleId] = {
+                players: [
+                    { id: p1Socket.id, user: p1Socket.user },
+                    { id: p2Socket.id, user: p2Socket.user }
+                ],
+                scores: { [p1Socket.id]: 0, [p2Socket.id]: 0 },
+                periodId: p1Socket.periodId,
+                answers: {}
+            };
+            
+            io.to(battleId).emit('battle_found', { battleId, players: activeBattles[battleId].players });
+            console.log(`[Socket.IO] Evento 'battle_found' emitido para a sala ${battleId}.`);
+
+            generateBattleQuestion(activeBattles[battleId].periodId)
+                .then(question => {
+                    activeBattles[battleId].question = question;
+                    io.to(battleId).emit('new_battle_question', question);
+                    console.log(`[Socket.IO] Primeira pergunta enviada para a batalha ${battleId}.`);
+                })
+                .catch(err => {
+                    console.error("[Socket.IO] Erro ao gerar pergunta:", err);
+                    io.to(battleId).emit('battle_error', 'Erro ao gerar pergunta.');
+                });
+        } else {
+            socket.emit('waiting_for_opponent');
+            console.log(`[Socket.IO] ${user.name} está esperando por um oponente.`);
+        }
+    });
+    
+    socket.on('battle_answer', ({ battleId, answer }) => {
+        const battle = activeBattles[battleId];
+        if (!battle || battle.answers[socket.id]) return;
+
+        battle.answers[socket.id] = answer;
+        const allAnswered = Object.keys(battle.answers).length === 2;
+
+        if (allAnswered) {
+            let results = {};
+            for (const playerId in battle.answers) {
+                const isCorrect = battle.answers[playerId] === battle.question.answer;
+                if (isCorrect) battle.scores[playerId] += 10;
+                results[playerId] = { isCorrect, answer: battle.answers[playerId] };
+            }
+            
+            io.to(battleId).emit('battle_result', { results, scores: battle.scores, correctAnswer: battle.question.answer });
+            
+            battle.answers = {};
+            
+            setTimeout(() => {
+                 generateBattleQuestion(battle.periodId)
+                    .then(question => {
+                        battle.question = question;
+                        io.to(battleId).emit('new_battle_question', question);
+                    })
+                    .catch(err => io.to(battleId).emit('battle_error', 'Erro ao gerar pergunta.'));
+            }, 5000);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`[Socket.IO] Usuário desconectado: ${socket.id}`);
+        battleQueue = battleQueue.filter(s => s.id !== socket.id);
+        for (const battleId in activeBattles) {
+            const playerIndex = activeBattles[battleId].players.findIndex(p => p.id === socket.id);
+            if (playerIndex !== -1) {
+                console.log(`[Socket.IO] Jogador desconectou da batalha ${battleId}`);
+                const opponent = activeBattles[battleId].players[1 - playerIndex];
+                if (opponent) {
+                     io.to(opponent.id).emit('opponent_disconnected');
+                }
+                delete activeBattles[battleId];
+                break;
+            }
+        }
+    });
 });
 
-
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

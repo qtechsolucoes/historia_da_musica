@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks } from 'lucide-react';
+import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords } from 'lucide-react';
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
+import BattleMode from './BattleMode'; // Importado
 
 const ChallengeHub = ({ setActiveChallenge }) => (
     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-5xl mx-auto text-center">
         <h2 className="text-3xl mb-6 text-amber-300 font-title flex items-center justify-center gap-3"><BrainCircuit/> Hub de Desafios</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div className="mb-6 p-4 border border-dashed border-amber-500 rounded-lg bg-amber-900/20">
+            <h3 className="text-xl font-bold text-amber-200 animate-pulse">🔥 Desafio Diário 🔥</h3>
+            <p className="text-stone-300 mt-1">Jogue no período Barroco para ganhar pontos em dobro!</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button onClick={() => setActiveChallenge('quiz')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <ListChecks size={32} className="mb-2 text-amber-400"/>
                 <h3 className="text-xl font-bold text-amber-300 font-serif">Múltipla Escolha</h3>
@@ -23,6 +30,11 @@ const ChallengeHub = ({ setActiveChallenge }) => (
                 <Clock size={32} className="mb-2 text-amber-400"/>
                 <h3 className="text-xl font-bold text-amber-300 font-serif">Linha do Tempo</h3>
                 <p className="text-stone-400 mt-2 text-sm">Ordene os compositores cronologicamente.</p>
+            </button>
+            <button onClick={() => setActiveChallenge('battle')} className="p-6 bg-gray-800/50 rounded-lg border border-blue-800/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center">
+                <Swords size={32} className="mb-2 text-blue-400"/>
+                <h3 className="text-xl font-bold text-blue-300 font-serif">Batalha</h3>
+                <p className="text-stone-400 mt-2 text-sm">Desafie outro jogador em tempo real.</p>
             </button>
             <button onClick={() => setActiveChallenge('ranking')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <Crown size={32} className="mb-2 text-amber-400"/>
@@ -47,7 +59,9 @@ const MainContent = ({
     timeline,
     onGenerateTimeline,
     onCheckTimeline,
-    leaderboard
+    leaderboard,
+    user,
+    socket
 }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [timelineItems, setTimelineItems] = useState(timeline.items);
@@ -185,8 +199,8 @@ const MainContent = ({
                     if (userIndex < 0 || userIndex >= timeline.correctOrder.length) return 'bg-gray-800/60 border-amber-800/50';
                     
                     return timeline.correctOrder[userIndex] === itemName 
-                        ? 'bg-green-600/50 border-green-500' // Certo
-                        : 'bg-red-600/50 border-red-500'; // Errado
+                        ? 'bg-green-600/50 border-green-500'
+                        : 'bg-red-600/50 border-red-500';
                 };
                 
                 return (
@@ -242,6 +256,26 @@ const MainContent = ({
                         </ul>
                     </motion.div>
                 );
+            
+            case 'battle':
+                if (!user) {
+                    return (
+                        <div className="text-center p-6 bg-black/20 rounded-lg max-w-4xl mx-auto">
+                            <h2 className="text-2xl text-amber-300 mb-4">Modo Batalha</h2>
+                            <p className="text-stone-300">Você precisa estar logado para desafiar outros jogadores.</p>
+                            <button onClick={goBackToHub} className="mt-4 flex items-center justify-center mx-auto gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all">
+                                <ArrowLeft size={16} /> Voltar ao Hub
+                            </button>
+                        </div>
+                    );
+                }
+                return (
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                        <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
+                        <BattleMode user={user} socket={socket} period={period} onBack={goBackToHub} />
+                    </motion.div>
+                );
+
 
             default: return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
         }

@@ -1,17 +1,25 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { GoogleOAuthProvider, googleLogout } from '@react-oauth/google';
+import io from 'socket.io-client';
 import { musicHistoryData } from './data/musicHistoryData';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
-import Sidebar from './components/sidebar';
+import Sidebar from './components/Sidebar';
 import LoadingScreen from './components/LoadingScreen';
+import AchievementToast from './components/AchievementToast';
 
-// A CHAVE DA API FOI REMOVIDA DESTE ARQUIVO
-// const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const backendUrl = 'http://localhost:5001';
+
+const socket = io(backendUrl);
+
+const ALL_ACHIEVEMENTS = {
+    MESTRE_MEDIEVAL: { name: "Mestre Medieval", description: "Acerte 10 perguntas do período Medieval." },
+    VIAJANTE_DO_TEMPO: { name: "Viajante do Tempo", description: "Visite todos os 5 períodos musicais." },
+    POLIGLOTA_MUSICAL: { name: "Poliglota Musical", description: "Complete desafios em 3 períodos diferentes." }
+};
 
 export default function App() {
     const [isLoading, setIsLoading] = useState(true);
@@ -19,18 +27,18 @@ export default function App() {
     const [modalContent, setModalContent] = useState(null);
     const [hasInteracted, setHasInteracted] = useState(false);
 
-    // --- ESTADOS DE JOGO ---
     const [activeChallenge, setActiveChallenge] = useState(null);
     const [quiz, setQuiz] = useState({ question: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
     const [whoAmI, setWhoAmI] = useState({ description: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
     const [timeline, setTimeline] = useState({ items: [], correctOrder: [], feedback: '', isLoading: false, isChecked: false });
 
-    // --- ESTADOS DE USUÁRIO E RANKING ---
     const [currentUser, setCurrentUser] = useState(null);
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState([]);
+    const [achievements, setAchievements] = useState([]);
+    const [stats, setStats] = useState({});
+    const [lastAchievement, setLastAchievement] = useState(null);
 
-    // --- REFS PARA ÁUDIO ---
     const correctSoundRef = useRef(null);
     const incorrectSoundRef = useRef(null);
 
@@ -65,8 +73,19 @@ export default function App() {
     const handleSelectPeriod = (id) => {
         setSelectedPeriodId(id);
         setActiveChallenge(null);
+        if (currentUser && stats.periodsVisited) {
+            const visited = Object.keys(stats.periodsVisited);
+            if (!visited.includes(id)) {
+                const newVisited = new Set([...visited, id]);
+                const newPeriodsVisited = Array.from(newVisited).reduce((obj, key) => ({ ...obj, [key]: stats.periodsVisited[key] || 0 }), {});
+                setStats(prev => ({ ...prev, periodsVisited: newPeriodsVisited }));
+                if (newVisited.size >= 5) {
+                    checkAndAwardAchievement(ALL_ACHIEVEMENTS.VIAJANTE_DO_TEMPO);
+                }
+            }
+        }
     };
-
+    
     const handleLoginSuccess = async (credentialResponse) => {
         try {
             const response = await fetch(`${backendUrl}/api/auth/google`, {
@@ -78,6 +97,8 @@ export default function App() {
             const userFromDb = await response.json();
             setCurrentUser(userFromDb);
             setScore(userFromDb.score);
+            setAchievements(userFromDb.achievements || []);
+            setStats(userFromDb.stats || {});
         } catch (error) {
             console.error("Erro no login:", error);
         }
@@ -87,33 +108,94 @@ export default function App() {
         googleLogout();
         setCurrentUser(null);
         setScore(0);
+        setAchievements([]);
+        setStats({});
+    };
+
+    const checkAndAwardAchievement = async (achievement) => {
+        if (currentUser && !achievements.find(a => a.name === achievement.name)) {
+            try {
+                const response = await fetch(`${backendUrl}/api/achievements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: currentUser.email, achievement }),
+                });
+                if (response.ok) {
+                    const updatedUser = await response.json();
+                    if (updatedUser && updatedUser.achievements) {
+                        setAchievements(updatedUser.achievements);
+                        setLastAchievement(achievement);
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao salvar conquista:", error);
+            }
+        }
     };
 
     const handleCorrectAnswer = async () => {
         if (!currentUser) return;
         const newScore = score + 15;
         setScore(newScore);
+
+        const currentPeriodCorrectAnswers = ((stats.periodsVisited && stats.periodsVisited[selectedPeriodId]) || 0) + 1;
+        
+        const newStats = {
+            ...stats,
+            quizzesCompleted: (stats.quizzesCompleted || 0) + 1,
+            correctAnswers: (stats.correctAnswers || 0) + 1,
+            periodsVisited: {
+                ...stats.periodsVisited,
+                [selectedPeriodId]: currentPeriodCorrectAnswers
+            }
+        };
+        setStats(newStats);
+
         correctSoundRef.current?.play().catch(console.error);
+
         try {
             await fetch(`${backendUrl}/api/score`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: currentUser.email, score: newScore }),
+                body: JSON.stringify({
+                    email: currentUser.email,
+                    score: newScore,
+                    statsUpdate: { correctAnswers: 1, quizzesCompleted: 1 }
+                }),
             });
             const updatedLeaderboard = await fetch(`${backendUrl}/api/leaderboard`);
             const data = await updatedLeaderboard.json();
             setLeaderboard(data);
+
+            if (selectedPeriodId === 'medieval' && currentPeriodCorrectAnswers >= 10) {
+                checkAndAwardAchievement(ALL_ACHIEVEMENTS.MESTRE_MEDIEVAL);
+            }
         } catch (error) {
             console.error("Erro ao salvar pontuação no backend:", error);
             setScore(prevScore => prevScore - 15);
         }
     };
 
-    const handleIncorrectAnswer = () => {
+    const handleIncorrectAnswer = async () => {
         incorrectSoundRef.current?.play().catch(console.error);
+        if (currentUser) {
+            setStats(prev => ({ ...prev, incorrectAnswers: (prev.incorrectAnswers || 0) + 1 }));
+            try {
+                await fetch(`${backendUrl}/api/score`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: currentUser.email,
+                        score: score,
+                        statsUpdate: { incorrectAnswers: 1 }
+                    }),
+                });
+            } catch (error) {
+                console.error("Erro ao salvar estatísticas:", error);
+            }
+        }
     };
 
-    // FUNÇÃO ATUALIZADA
     const handleGenerateQuiz = async () => {
         setQuiz({ question: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
         if (!selectedPeriod.composers || selectedPeriod.composers.length === 0) {
@@ -131,16 +213,13 @@ RESPOSTA: [Texto da opção correta aqui]
 Responda em português do Brasil.`;
         
         try {
-            // CHAMADA SEGURA PARA O BACKEND
             const response = await fetch(`${backendUrl}/api/gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: prompt })
             });
 
-            if (!response.ok) {
-                throw new Error("Falha ao comunicar com o servidor para gerar quiz.");
-            }
+            if (!response.ok) throw new Error("Falha ao comunicar com o servidor.");
             
             const result = await response.json();
             const text = result.candidates[0]?.content?.parts[0]?.text;
@@ -176,7 +255,6 @@ Responda em português do Brasil.`;
         setQuiz(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
     };
 
-    // FUNÇÃO ATUALIZADA
     const handleGenerateWhoAmI = async () => {
         setWhoAmI({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
         if (!selectedPeriod.composers || selectedPeriod.composers.length < 4) {
@@ -188,16 +266,13 @@ Responda em português do Brasil.`;
         const prompt = `Crie uma descrição curta e enigmática para o desafio "Quem sou eu?" sobre o compositor ${correctComposer.name}. A descrição deve ter de 2 a 3 frases, destacando uma característica única, uma obra famosa ou um fato curioso de sua vida, sem mencionar o nome. Deve ser um desafio para um estudante de música. Responda apenas com a descrição, em português do Brasil.`;
         
         try {
-            // CHAMADA SEGURA PARA O BACKEND
             const response = await fetch(`${backendUrl}/api/gemini`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: prompt })
             });
             
-            if (!response.ok) {
-                throw new Error("Falha ao comunicar com o servidor para gerar 'Quem sou eu?'.");
-            }
+            if (!response.ok) throw new Error("Falha ao comunicar com o servidor.");
 
             const result = await response.json();
             const description = result.candidates[0]?.content?.parts[0]?.text;
@@ -301,6 +376,8 @@ Responda em português do Brasil.`;
                                 hasInteracted={hasInteracted}
                                 user={currentUser}
                                 score={score}
+                                achievements={achievements}
+                                stats={stats}
                                 onLoginSuccess={handleLoginSuccess}
                                 onLogout={handleLogout}
                             />
@@ -321,6 +398,8 @@ Responda em português do Brasil.`;
                                         onGenerateTimeline={handleGenerateTimeline}
                                         onCheckTimeline={handleCheckTimeline}
                                         leaderboard={leaderboard}
+                                        user={currentUser}
+                                        socket={socket}
                                     />
                                 )}
                             </div>
@@ -328,6 +407,10 @@ Responda em português do Brasil.`;
                         </motion.div>
                     )}
                 </AnimatePresence>
+                <AchievementToast 
+                    achievement={lastAchievement} 
+                    onDismiss={() => setLastAchievement(null)} 
+                />
             </div>
         </GoogleOAuthProvider>
     );
