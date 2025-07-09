@@ -116,7 +116,7 @@ router.get('/leaderboard', async (req, res) => {
 });
 
 // Rota para a IA Generativa
-router.post('/gemini', 
+router.post('/gemini',
     body('prompt').isString().notEmpty(),
     async (req, res) => {
         const errors = validationResult(req);
@@ -124,19 +124,39 @@ router.post('/gemini',
             return res.status(400).json({ errors: errors.array() });
         }
 
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
-            const prompt = req.body.prompt;
-            
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = await response.text();
-            
-            res.status(200).json({ candidates: [{ content: { parts: [{ text: text }] } }] });
+        const maxRetries = 3;
+        let attempt = 0;
+        const prompt = req.body.prompt;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
-        } catch (error) {
-            console.error("Erro ao chamar a API Gemini:", error);
-            res.status(500).json({ error: "Ocorreu um erro ao processar a sua solicitação com a IA." });
+        while (attempt < maxRetries) {
+            try {
+                console.log(`Tentativa ${attempt + 1} de chamar a API Gemini...`);
+                const result = await model.generateContent(prompt);
+                const response = result.response;
+                const text = await response.text();
+                
+                // Sucesso! Envia a resposta e sai do loop.
+                return res.status(200).json({ candidates: [{ content: { parts: [{ text: text }] } }] });
+
+            } catch (error) {
+                attempt++;
+                console.error(`Erro na tentativa ${attempt}:`, error.message);
+
+                // Se for um erro 503 e ainda tivermos tentativas...
+                if (error.status === 503 && attempt < maxRetries) {
+                    // Espera 2 segundos antes de tentar novamente (backoff exponencial)
+                    const delay = Math.pow(2, attempt) * 1000;
+                    console.log(`Modelo sobrecarregado. Tentando novamente em ${delay / 1000} segundos...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                } else {
+                    // Se não for um erro 503 ou se esgotaram as tentativas, envia o erro.
+                    return res.status(error.status || 500).json({ 
+                        error: "Ocorreu um erro ao processar a sua solicitação com a IA.",
+                        details: error.message
+                    });
+                }
+            }
         }
     }
 );
