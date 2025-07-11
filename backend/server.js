@@ -1,5 +1,4 @@
 require('dotenv').config();
-console.log("Ficheiro server.js carregado e a executar.");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,7 +7,7 @@ const { Server } = require("socket.io");
 
 const apiRoutes = require('./routes/api');
 const kahootApiRoutes = require('./routes/kahootApi');
-const adminApiRoutes = require('./routes/adminApi'); // 1. Importar a nova rota de admin
+const adminApiRoutes = require('./routes/adminApi');
 const initializeSocketManager = require('./socket/battleManager');
 const initializeKahootManager = require('./socket/kahootManager');
 
@@ -31,16 +30,10 @@ const io = new Server(server, {
 
 app.use('/api', apiRoutes);
 app.use('/api/kahoot', kahootApiRoutes);
-console.log("A registar a rota /api/admin...");
-app.use('/api/admin', adminApiRoutes); // 2. Usar a nova rota de admin
+app.use('/api/admin', adminApiRoutes);
 
 initializeSocketManager(io);
 initializeKahootManager(io);
-
-app.use((req, res, next) => {
-    console.log(`ALERTA: Pedido não correspondido recebido -> Método: ${req.method}, URL: ${req.originalUrl}`);
-    res.status(404).send(`O servidor não conseguiu encontrar a rota: ${req.method} ${req.originalUrl}`);
-});
 
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));

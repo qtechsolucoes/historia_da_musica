@@ -1,13 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Question = require('../models/Question'); // O nosso novo modelo
+const Question = require('../models/Question');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-console.log("Ficheiro adminApi.js foi carregado com sucesso!");
-router.get('/test', (req, res) => {
-    console.log("SUCESSO! A rota GET /api/admin/test foi acedida!");
-    res.status(200).send("A rota de administração está a funcionar!");
-});
 
 if (!process.env.GEMINI_API_KEY) {
     throw new Error("A variável de ambiente GEMINI_API_KEY não foi definida.");
@@ -15,8 +9,6 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Rota para popular o banco de dados
-// Ex: POST /api/admin/populate-questions
 router.post('/populate-questions', async (req, res) => {
     const { period, difficulty, count } = req.body;
 
@@ -54,13 +46,11 @@ router.post('/populate-questions', async (req, res) => {
             difficulty: difficulty,
         }));
 
-        // Insere as perguntas, ignorando duplicados (com base no índice que criamos no modelo)
         const inserted = await Question.insertMany(questionsToSave, { ordered: false });
 
         res.status(201).json({ message: `${inserted.length} novas perguntas foram adicionadas com sucesso ao banco de dados para o período ${period}.` });
 
     } catch (error) {
-        // Se o erro for de chaves duplicadas, significa que a IA gerou perguntas repetidas.
         if (error.code === 11000) {
             return res.status(200).json({ message: "Tentativa de inserção concluída. Algumas perguntas geradas pela IA já existiam e foram ignoradas." });
         }
