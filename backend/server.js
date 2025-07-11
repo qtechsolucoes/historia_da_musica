@@ -6,7 +6,10 @@ const http = require('http');
 const { Server } = require("socket.io");
 
 const apiRoutes = require('./routes/api');
+const kahootApiRoutes = require('./routes/kahootApi'); // 1. Importar a nova rota de API
 const initializeSocketManager = require('./socket/battleManager');
+const initializeKahootManager = require('./socket/kahootManager');
+// O gerenciador de sockets do Kahoot será criado na próxima etapa.
 
 const app = express();
 const server = http.createServer(app);
@@ -30,9 +33,12 @@ const io = new Server(server, {
 
 // --- Rotas da Aplicação ---
 app.use('/api', apiRoutes);
+app.use('/api/kahoot', kahootApiRoutes); // 2. Usar a nova rota de API
 
 // --- Inicialização do Gestor de Sockets ---
 initializeSocketManager(io);
+initializeKahootManager(io); 
+// initializeKahootManager(io); // Esta linha será descomentada na próxima etapa.
 
 // --- Inicialização do Servidor ---
 const PORT = process.env.PORT || 5001;

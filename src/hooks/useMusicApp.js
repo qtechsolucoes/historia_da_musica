@@ -10,6 +10,16 @@ const ALL_ACHIEVEMENTS = {
     POLIGLOTA_MUSICAL: { name: "Poliglota Musical", description: "Complete desafios em 3 períodos diferentes." }
 };
 
+// --- FUNÇÃO DE AJUDA CORRIGIDA ---
+// Esta função extrai de forma segura o primeiro ano de uma string de tempo de vida (lifespan).
+// Ela usa uma expressão regular para encontrar o primeiro número de 4 dígitos.
+const getBirthYear = (lifespan) => {
+    if (!lifespan) return Infinity; // Retorna um número grande se a data não existir.
+    const match = lifespan.match(/\d{4}/); // Encontra o primeiro número de 4 dígitos.
+    return match ? parseInt(match[0], 10) : Infinity; // Converte para número.
+};
+
+
 export const useMusicApp = () => {
     const [selectedPeriodId, setSelectedPeriodId] = useState('medieval');
     const [modalContent, setModalContent] = useState(null);
@@ -303,12 +313,17 @@ Responda em português do Brasil.`;
             return;
         }
         const randomComposers = [...selectedPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
+        
+        // --- LÓGICA DE ORDENAÇÃO CORRIGIDA ---
+        // A ordenação agora usa a função getBirthYear para extrair o ano corretamente.
         const correctOrder = [...randomComposers]
-            .sort((a, b) => parseInt(a.lifespan) - parseInt(b.lifespan))
+            .sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan))
             .map(c => c.name);
+
         const shuffledItems = [...randomComposers]
             .map(c => ({ name: c.name, lifespan: c.lifespan }))
             .sort(() => 0.5 - Math.random());
+            
         setTimeline({
             items: shuffledItems,
             correctOrder: correctOrder,
