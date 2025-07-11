@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { googleLogout } from '@react-oauth/google';
+import { googleLogout, useGoogleLogin } from '@react-oauth/google';
 import { musicHistoryData } from '../data/musicHistoryData';
 
 const backendUrl = 'http://localhost:5001';
@@ -10,13 +10,10 @@ const ALL_ACHIEVEMENTS = {
     POLIGLOTA_MUSICAL: { name: "Poliglota Musical", description: "Complete desafios em 3 períodos diferentes." }
 };
 
-// --- FUNÇÃO DE AJUDA CORRIGIDA ---
-// Esta função extrai de forma segura o primeiro ano de uma string de tempo de vida (lifespan).
-// Ela usa uma expressão regular para encontrar o primeiro número de 4 dígitos.
 const getBirthYear = (lifespan) => {
-    if (!lifespan) return Infinity; // Retorna um número grande se a data não existir.
-    const match = lifespan.match(/\d{4}/); // Encontra o primeiro número de 4 dígitos.
-    return match ? parseInt(match[0], 10) : Infinity; // Converte para número.
+    if (!lifespan) return Infinity;
+    const match = lifespan.match(/\d{4}/);
+    return match ? parseInt(match[0], 10) : Infinity;
 };
 
 
@@ -96,23 +93,42 @@ export const useMusicApp = () => {
         }
     };
 
-    const handleLoginSuccess = async (credentialResponse) => {
+    // --- NOVA LÓGICA DE LOGIN ---
+    const handleLoginSuccess = async (tokenResponse) => {
         try {
-            const response = await fetch(`${backendUrl}/api/auth/google`, {
+            // 1. Usa o access_token para buscar os dados do usuário na API do Google
+            const googleResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + tokenResponse.access_token, {
+                headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`,
+                    Accept: 'application/json'
+                }
+            });
+            const profile = await googleResponse.json();
+
+            // 2. Envia o perfil do usuário para o seu backend
+            const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: credentialResponse.credential }),
+                body: JSON.stringify({ profile }), // Envia o objeto de perfil
             });
-            if (!response.ok) throw new Error('Falha na autenticação com o backend');
-            const userFromDb = await response.json();
+
+            if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
+            
+            const userFromDb = await backendResponse.json();
             setCurrentUser(userFromDb);
             setScore(userFromDb.score);
             setAchievements(userFromDb.achievements || []);
             setStats(userFromDb.stats || {});
+
         } catch (error) {
             console.error("Erro no login:", error);
         }
     };
+
+    const handleCustomLogin = useGoogleLogin({
+        onSuccess: handleLoginSuccess,
+        onError: (error) => console.log('Login Failed:', error)
+    });
 
     const handleLogout = () => {
         googleLogout();
@@ -168,7 +184,9 @@ export const useMusicApp = () => {
     const handleIncorrectAnswer = async () => {
         incorrectSoundRef.current?.play().catch(console.error);
         if (currentUser) {
-            setStats(prev => ({ ...prev, incorrectAnswers: (prev.incorrectAnswers || 0) + 1 }));
+            const incorrectCount = (stats.incorrectAnswers || 0) + 1;
+            const correctCount = (stats.correctAnswers || 0);
+            setStats(prev => ({...prev, incorrectAnswers: incorrectCount}));
             try {
                 await fetch(`${backendUrl}/api/score`, {
                     method: 'POST',
@@ -314,8 +332,6 @@ Responda em português do Brasil.`;
         }
         const randomComposers = [...selectedPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
         
-        // --- LÓGICA DE ORDENAÇÃO CORRIGIDA ---
-        // A ordenação agora usa a função getBirthYear para extrair o ano corretamente.
         const correctOrder = [...randomComposers]
             .sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan))
             .map(c => c.name);
@@ -413,7 +429,7 @@ Responda em português do Brasil.`;
         handleCloseModal,
         handleSelectPeriod,
         setActiveChallenge,
-        handleLoginSuccess,
+        handleCustomLogin,
         handleLogout,
         handleGenerateQuiz,
         handleQuizGuess,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords } from 'lucide-react';
+import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords, PlusSquare, Hash } from 'lucide-react';
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
@@ -15,7 +16,19 @@ const ChallengeHub = ({ setActiveChallenge }) => (
             <p className="text-stone-300 mt-1">Jogue no período Barroco para ganhar pontos em dobro!</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link to="/quiz/create" className="p-6 bg-green-800/50 rounded-lg border border-green-700/50 hover:bg-green-600/20 hover:border-green-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
+                <PlusSquare size={32} className="mb-2 text-green-400"/>
+                <h3 className="text-xl font-bold text-green-300 font-serif">Criar Quiz Multiplayer</h3>
+                <p className="text-stone-400 mt-2 text-sm">Crie e partilhe o seu próprio quiz interativo!</p>
+            </Link>
+
+            <Link to="/quiz/join" className="p-6 bg-blue-800/50 rounded-lg border border-blue-700/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
+                <Hash size={32} className="mb-2 text-blue-400"/>
+                <h3 className="text-xl font-bold text-blue-300 font-serif">Entrar com Código</h3>
+                <p className="text-stone-400 mt-2 text-sm">Participe de um quiz existente.</p>
+            </Link>
+            
             <button onClick={() => setActiveChallenge('quiz')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <ListChecks size={32} className="mb-2 text-amber-400"/>
                 <h3 className="text-xl font-bold text-amber-300 font-serif">Múltipla Escolha</h3>
@@ -36,19 +49,20 @@ const ChallengeHub = ({ setActiveChallenge }) => (
                 <h3 className="text-xl font-bold text-amber-300 font-serif">De Que Período?</h3>
                 <p className="text-stone-400 mt-2 text-sm">Identifique o período musical pela descrição.</p>
             </button>
-            <button onClick={() => setActiveChallenge('battle')} className="p-6 bg-gray-800/50 rounded-lg border border-blue-800/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center">
-                <Swords size={32} className="mb-2 text-blue-400"/>
-                <h3 className="text-xl font-bold text-blue-300 font-serif">Batalha</h3>
+            <button onClick={() => setActiveChallenge('battle')} className="p-6 bg-gray-800/50 rounded-lg border border-purple-800/50 hover:bg-purple-600/20 hover:border-purple-500 transition-all group flex flex-col items-center">
+                <Swords size={32} className="mb-2 text-purple-400"/>
+                <h3 className="text-xl font-bold text-purple-300 font-serif">Duelo Épico</h3>
                 <p className="text-stone-400 mt-2 text-sm">Desafie outro jogador em tempo real.</p>
             </button>
             <button onClick={() => setActiveChallenge('ranking')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <Crown size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">Ranking</h3>
+                <h3 className="text-xl font-bold text-amber-300 font-serif">Ranking Geral</h3>
                 <p className="text-stone-400 mt-2 text-sm">Veja os maiores mestres da história.</p>
             </button>
         </div>
     </motion.div>
 );
+
 
 const MainContent = ({ 
     period, 
@@ -75,7 +89,7 @@ const MainContent = ({
     const [timelineItems, setTimelineItems] = useState(timeline.items);
     
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortBy, setSortBy] = useState('name'); // 'name' ou 'composer'
+    const [sortBy, setSortBy] = useState('name');
 
     useEffect(() => {
         setSearchTerm('');
@@ -174,7 +188,6 @@ const MainContent = ({
             return <div className="text-stone-400 p-4 text-center">Conteúdo não disponível para esta seção.</div>;
         }
 
-        // --- INÍCIO DA MELHORIA PARA OBRAS ---
         const filteredItems = items.filter(item => 
             item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.composer.toLowerCase().includes(searchTerm.toLowerCase())
@@ -184,7 +197,6 @@ const MainContent = ({
             if (sortBy === 'composer') {
                 return a.composer.localeCompare(b.composer);
             }
-            // Ordenação padrão por título
             return a.title.localeCompare(b.title);
         });
 
@@ -194,7 +206,6 @@ const MainContent = ({
             acc[category].push(work);
             return acc;
         }, {});
-        // --- FIM DA MELHORIA PARA OBRAS ---
 
         return (
             <div className="space-y-8 max-w-6xl mx-auto">

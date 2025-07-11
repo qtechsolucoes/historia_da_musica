@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// 1. Importar os componentes de roteamento
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import io from 'socket.io-client';
@@ -14,23 +13,17 @@ import Sidebar from './components/Sidebar';
 import LoadingScreen from './components/LoadingScreen';
 import AchievementToast from './components/AchievementToast';
 
-// --- COMPONENTES PROVISÓRIOS (PLACEHOLDERS) PARA AS NOVAS TELAS ---
-// Estes componentes serão substituídos pelos ficheiros reais que você criará.
-const CreateKahootScreen = () => <div className="text-white h-screen flex items-center justify-center bg-gray-800"><h1>Página de Criação do Quiz (Em breve)</h1></div>;
-const KahootHostLobby = () => <div className="text-white h-screen flex items-center justify-center bg-gray-800"><h1>Lobby do Anfitrião (Em breve)</h1></div>;
-const KahootJoinScreen = () => <div className="text-white h-screen flex items-center justify-center bg-gray-800"><h1>Ecrã para Entrar no Jogo (Em breve)</h1></div>;
-const KahootPlayerScreen = () => <div className="text-white h-screen flex items-center justify-center bg-gray-800"><h1>Ecrã do Jogador (Em breve)</h1></div>;
-// ----------------------------------------------------------------
+// --- COMPONENTES DO QUIZ MULTIPLAYER ---
+import CreateQuiz from './components/quiz/CreateQuiz';
+import QuizLobby from './components/quiz/QuizLobby';
+import JoinQuiz from './components/quiz/JoinQuiz';
+import PlayerScreen from './components/quiz/PlayerScreen';
+import HostScreen from './components/quiz/HostScreen';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const backendUrl = 'http://localhost:5001';
 const socket = io(backendUrl);
 
-/**
- * AppLayout é o componente que contém a interface principal da sua aplicação
- * (a exploração da história da música com a sidebar e o conteúdo principal).
- * Isto permite que seja renderizado apenas na rota principal ("/").
- */
 const AppLayout = () => {
     const [hasInteracted, setHasInteracted] = useState(false);
     const musicAppProps = useMusicApp();
@@ -50,7 +43,8 @@ const AppLayout = () => {
                 score={musicAppProps.score}
                 achievements={musicAppProps.achievements}
                 stats={musicAppProps.stats}
-                onLoginSuccess={musicAppProps.handleLoginSuccess}
+                // LINHA CORRIGIDA ABAIXO
+                onCustomLogin={musicAppProps.handleCustomLogin} 
                 onLogout={musicAppProps.handleLogout}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -94,7 +88,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 5000); // Mantém a tela de loading por 5 segundos
+        const timer = setTimeout(() => setIsLoading(false), 3000);
         return () => clearTimeout(timer);
     }, []);
 
@@ -117,8 +111,6 @@ export default function App() {
                     {isLoading ? (
                         <LoadingScreen key="loading-screen" />
                     ) : (
-                        // 2. O BrowserRouter envolve toda a aplicação para gerir o histórico de navegação.
-                        // O 'basename' é crucial e deve corresponder à configuração 'base' no seu vite.config.js.
                         <BrowserRouter basename="/historia_da_musica/">
                              <motion.div 
                                 key="main-app-motion" 
@@ -127,16 +119,15 @@ export default function App() {
                                 animate={{ opacity: 1 }}
                                 transition={{ duration: 1.0 }}
                             >
-                                {/* 3. O componente <Routes> define onde as rotas serão renderizadas. */}
                                 <Routes>
-                                    {/* Rota principal que renderiza a interface de exploração */}
                                     <Route path="/*" element={<AppLayout />} />
 
-                                    {/* Novas rotas para o modo de jogo interativo */}
-                                    <Route path="/challenges/kahoot/create" element={<CreateKahootScreen />} />
-                                    <Route path="/kahoot/lobby/:accessCode" element={<KahootHostLobby />} />
-                                    <Route path="/kahoot/join" element={<KahootJoinScreen />} />
-                                    <Route path="/kahoot/play/:accessCode" element={<KahootPlayerScreen />} />
+                                    <Route path="/quiz/create" element={<CreateQuiz socket={socket} />} />
+                                    <Route path="/quiz/lobby/:accessCode" element={<QuizLobby socket={socket} />} />
+                                    <Route path="/quiz/join" element={<JoinQuiz socket={socket} />} />
+                                    <Route path="/quiz/play/:accessCode" element={<PlayerScreen socket={socket} />} />
+                                    <Route path="/quiz/host/:accessCode" element={<HostScreen socket={socket} />} />
+
                                 </Routes>
                             </motion.div>
                         </BrowserRouter>

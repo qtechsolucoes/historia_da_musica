@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
-// A importação do CSS foi removida: import './Sidebar.css';
+import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 
 const Sidebar = ({ 
     periods, 
@@ -12,7 +10,7 @@ const Sidebar = ({
     score, 
     achievements,
     stats,
-    onLoginSuccess,
+    onCustomLogin, // Alterado de onLoginSuccess
     onLogout
 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -51,13 +49,14 @@ const Sidebar = ({
     
     const calculateWinRate = () => {
         if (!stats || !stats.quizzesCompleted) return '0%';
-        const rate = (stats.correctAnswers / stats.quizzesCompleted) * 100;
+        const totalAnswers = (stats.correctAnswers || 0) + (stats.incorrectAnswers || 0);
+        if (totalAnswers === 0) return '0%';
+        const rate = (stats.correctAnswers / totalAnswers) * 100;
         return `${rate.toFixed(1)}%`;
     }
 
     return (
         <aside className="w-64 bg-black/30 backdrop-blur-md border-r-2 border-amber-900/50 flex flex-col flex-shrink-0">
-            {/* O cabeçalho e a navegação permanecem os mesmos */}
             <header className="text-center p-4 border-b-2 border-amber-900/50">
                 <h1 className="text-2xl lg:text-3xl font-title gold-text-effect" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
                     Codex Historiæ Musicæ
@@ -86,7 +85,7 @@ const Sidebar = ({
                         {showProfileDetails && (
                             <div className="mt-2 w-full text-left p-3 bg-black/20 rounded-md border border-amber-900/50">
                                 <h3 className="font-bold text-amber-300 mb-2 flex items-center gap-2"><BarChart2 size={16}/> Estatísticas</h3>
-                                <p className="text-sm text-stone-300">Quizzes Concluídos: {stats.quizzesCompleted || 0}</p>
+                                <p className="text-sm text-stone-300">Respostas Corretas: {stats.correctAnswers || 0}</p>
                                 <p className="text-sm text-stone-300">Taxa de Acerto: {calculateWinRate()}</p>
                                 
                                 <h3 className="font-bold text-amber-300 mt-3 mb-2 flex items-center gap-2"><Star size={16}/> Conquistas</h3>
@@ -111,8 +110,15 @@ const Sidebar = ({
                     </div>
                 ) : (
                     <div className="flex flex-col items-center">
-                         <p className="text-stone-300 text-sm text-center mb-3">Faça login para salvar sua pontuação e conquistas!</p>
-                         <GoogleLogin onSuccess={onLoginSuccess} onError={() => console.log('Login Failed')} theme="filled_black" text="signin_with" shape="pill" />
+                         <p className="text-stone-300 text-sm text-center mb-3">Faça login para salvar seu progresso e conquistas!</p>
+                         {/* Botão de Login Customizado */}
+                         <button
+                            onClick={onCustomLogin}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all"
+                         >
+                            <UserPlus size={18}/>
+                            Login com Google
+                         </button>
                     </div>
                 )}
             </div>
@@ -137,7 +143,6 @@ const Sidebar = ({
                 </ul>
             </nav>
 
-            {/* ### INÍCIO DA ÁREA MODIFICADA ### */}
             <div className="p-4 border-t-2 border-amber-900/50 space-y-3">
                 <div className='flex items-center justify-center gap-4'>
                      <button onClick={handlePlayPause} className="p-2 rounded-full bg-amber-400/20 hover:bg-amber-400/40 text-amber-200 transition-colors">
@@ -159,14 +164,12 @@ const Sidebar = ({
                         aria-label="Volume"
                     />
                 </div>
-                {/* O container e o texto agora usam classes do Tailwind */}
                 <div className="w-full overflow-hidden whitespace-nowrap box-border">
                     <p className="inline-block animate-marquee text-amber-200 text-sm">
                         {isPlaying && selectedPeriod ? `Tocando agora: ${selectedPeriod.referenceSongTitle}` : 'Player pausado'}
                     </p>
                 </div>
             </div>
-            {/* ### FIM DA ÁREA MODIFICADA ### */}
 
             <audio ref={audioRef} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)} loop/>
         </aside>

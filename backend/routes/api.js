@@ -11,19 +11,67 @@ const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// --- Middlewares ---
-
-// Limitador de requisições para proteger contra ataques de força bruta
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // Limita cada IP a 100 requisições por janela
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
     message: 'Demasiadas requisições deste IP, por favor tente novamente após 15 minutos.'
 });
 
-// Aplica o limitador a todas as rotas deste router
 router.use(apiLimiter);
+
+// Rota de Autenticação Atualizada
+router.post('/auth/google', async (req, res) => {
+    const { token, profile } = req.body;
+
+    try {
+        let name, email, picture;
+
+        if (token) {
+            // Fluxo original: valida o ID token do Google
+            const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
+            const payload = ticket.getPayload();
+            name = payload.name;
+            email = payload.email;
+            picture = payload.picture;
+        } else if (profile) {
+            // Novo fluxo: usa o perfil obtido pelo frontend após login com access_token
+            name = profile.name;
+            email = profile.email;
+            picture = profile.picture;
+        } else {
+            return res.status(400).json({ error: "Nenhum token ou perfil fornecido." });
+        }
+
+        if (!email) {
+            return res.status(400).json({ error: "Email não encontrado no perfil." });
+        }
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = new User({
+                name,
+                email,
+                picture,
+                score: 0,
+                achievements: [],
+                stats: {
+                    quizzesCompleted: 0,
+                    correctAnswers: 0,
+                    incorrectAnswers: 0,
+                    periodsVisited: new Map(),
+                    favoritePeriod: 'Nenhum'
+                }
+            });
+            await user.save();
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error("Erro na autenticação do Google:", error);
+        res.status(400).json({ error: "Falha na autenticação" });
+    }
+});
 
 // --- Rotas ---
 
