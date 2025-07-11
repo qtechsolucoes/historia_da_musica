@@ -15,7 +15,7 @@ const quizSchema = new mongoose.Schema({
     periods: [{ type: String, required: true }],
     difficulty: { type: String, enum: ['Fácil', 'Médio', 'Difícil'], default: 'Médio' },
     questionCount: { type: Number, required: true },
-    questions: [questionSchema],
+     questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
     createdAt: { type: Date, default: Date.now }
 });
 
