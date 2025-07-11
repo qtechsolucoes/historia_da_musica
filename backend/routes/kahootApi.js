@@ -1,83 +1,52 @@
-// Ficheiro: backend/routes/kahootApi.js
-
 const express = require('express');
 const router = express.Router();
 const Quiz = require('../models/Quiz');
 const Game = require('../models/Game');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-if (!process.env.GEMINI_API_KEY) {
-    throw new Error("A variável de ambiente GEMINI_API_KEY não foi definida. Verifique o seu ficheiro .env no backend.");
-}
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const Question = require('../models/Question'); // Importamos o nosso banco de questões
 
 const generateAccessCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
+// Rota para criar um jogo a partir do nosso banco de dados
 router.post('/create', async (req, res) => {
     const { title, periods, difficulty, questionCount } = req.body;
 
     try {
-        console.log("A iniciar a criação de quiz com a IA...");
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `
-            Crie um quiz de história da música com ${questionCount} perguntas.
-            O quiz deve focar nos seguintes períodos: ${periods.join(', ')}.
-            A dificuldade geral deve ser: ${difficulty}.
-            Para cada pergunta, forneça o texto da pergunta, 4 opções de resposta (como um array de strings) e o índice da resposta correta (de 0 a 3).
-            Responda APENAS com um array de objetos JSON válido, seguindo este formato:
-            [
-                {"text": "Qual destes compositores é do período Barroco?", "options": ["Mozart", "Bach", "Chopin", "Debussy"], "correctAnswerIndex": 1},
-                {"text": "A 'Sagração da Primavera' foi composta por qual compositor?", "options": ["Stravinsky", "Schoenberg", "Bartók", "Vivaldi"], "correctAnswerIndex": 0}
-            ]
-        `;
+        // 1. Buscar perguntas aleatórias do nosso banco de dados
+        //    - $match: Filtra as perguntas pelos períodos e dificuldade selecionados.
+        //    - $sample: Pega uma amostra aleatória do tamanho especificado.
+        const questions = await Question.aggregate([
+            { $match: { period: { $in: periods }, difficulty: difficulty } },
+            { $sample: { size: Number(questionCount) } }
+        ]);
 
-        const result = await model.generateContent(prompt);
-        const responseText = await result.response.text();
-        
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) {
-            throw new Error("A IA não retornou um array JSON válido.");
-        }
-        
-        const jsonString = jsonMatch[0];
-        const generatedQuestions = JSON.parse(jsonString);
-
-        if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
-            throw new Error("A IA não gerou perguntas no formato esperado.");
+        // Verifica se encontrámos perguntas suficientes
+        if (questions.length < questionCount) {
+            return res.status(400).json({ error: `Não há perguntas suficientes (${questions.length}) para os critérios selecionados. Tente com menos perguntas ou popule mais o banco de dados.` });
         }
 
+        // 2. Cria um "template" de quiz para este jogo específico
         const newQuiz = new Quiz({
             title,
             periods,
             difficulty,
             questionCount,
-            questions: generatedQuestions
+            questions: questions // Usa as perguntas que buscámos do nosso banco
         });
         await newQuiz.save();
 
+        // 3. Cria a instância do jogo com um código de acesso
         const newGame = new Game({
             quiz: newQuiz._id,
             accessCode: generateAccessCode()
         });
         await newGame.save();
 
-        console.log(`Quiz "${title}" criado com sucesso. Código de acesso: ${newGame.accessCode}`);
+        // 4. Retorna o código de acesso para o frontend
         res.status(201).json({ accessCode: newGame.accessCode, gameId: newGame._id });
 
     } catch (error) {
-        // --- TRATAMENTO DE ERRO APRIMORADO ---
-        console.error("--- ERRO DETALHADO AO CRIAR O QUIZ ---");
-        console.error(error.message); // Log mais limpo
-        console.error("--------------------------------------");
-
-        // Se o erro for de sobrecarga da API, envia uma mensagem específica
-        if (error.message && error.message.includes('503 Service Unavailable')) {
-            return res.status(503).json({ error: "O serviço de IA está sobrecarregado. Por favor, tente novamente em alguns momentos." });
-        }
-        
-        // Para outros erros, envia uma mensagem genérica
-        res.status(500).json({ error: "Ocorreu um erro ao gerar as perguntas com a IA. Por favor, tente novamente." });
+        console.error("Erro ao criar o quiz a partir do banco de dados:", error);
+        res.status(500).json({ error: "Ocorreu um erro interno ao montar o quiz." });
     }
 });
 
