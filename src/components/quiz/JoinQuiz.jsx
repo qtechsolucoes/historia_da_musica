@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Gamepad2, ChevronRight } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
-const JoinKahoot = ({ socket }) => {
+const JoinQuiz = ({ socket }) => {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Extrai o código da URL, se existir
     const urlParams = new URLSearchParams(location.search);
     const initialCode = urlParams.get('code') || '';
 
@@ -16,12 +15,6 @@ const JoinKahoot = ({ socket }) => {
     const [nickname, setNickname] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        // Limpa ouvintes de eventos anteriores ao montar o componente
-        socket.off('kahoot:game_data');
-        socket.off('error');
-    }, [socket]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -37,16 +30,14 @@ const JoinKahoot = ({ socket }) => {
             if (response.error) {
                 setError(response.error);
             } else {
-                // Navega para a tela do jogador com os dados do jogo
-                navigate(`/kahoot/play/${accessCode}`, { state: { player: response.player, game: response.game } });
+                // Navega para a tela do jogador, passando os dados essenciais
+                navigate(`/quiz/play/${accessCode}`, { state: { player: response.player } });
             }
         });
     };
 
     return (
-        <div className="min-h-screen bg-gray-800 text-white flex items-center justify-center p-4" style={{
-            backgroundImage: `radial-gradient(circle at center, rgba(38, 70, 83, 0.2), transparent 60%)`
-        }}>
+        <div className="min-h-screen bg-gray-800 text-white flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -70,7 +61,6 @@ const JoinKahoot = ({ socket }) => {
                             required
                         />
                     </div>
-
                     <div>
                         <label htmlFor="nickname" className="block text-blue-200 font-semibold mb-2">Apelido</label>
                         <input
@@ -99,4 +89,4 @@ const JoinKahoot = ({ socket }) => {
     );
 };
 
-export default JoinKahoot;
+export default JoinQuiz;
