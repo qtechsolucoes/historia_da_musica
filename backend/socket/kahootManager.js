@@ -26,7 +26,6 @@ function initializeKahootManager(io) {
             }
         });
 
-        // --- LÓGICA DE ENTRADA DO JOGADOR CORRIGIDA ---
         socket.on('kahoot:player_join', async ({ accessCode, nickname }, callback) => {
             try {
                 const game = await Game.findOne({ accessCode });
@@ -39,10 +38,7 @@ function initializeKahootManager(io) {
                 game.players.push(newPlayer);
                 await game.save();
 
-                // Notifica a todos sobre o novo jogador
                 io.to(accessCode).emit('kahoot:player_list_update', game.players);
-
-                // Apenas confirma que a entrada foi bem-sucedida
                 callback({ success: true, player: newPlayer });
                 
             } catch (error) {
@@ -50,16 +46,38 @@ function initializeKahootManager(io) {
             }
         });
         
+        socket.on('kahoot:player_rejoin', async ({ accessCode, playerInfo }, callback) => {
+            try {
+                const game = await Game.findOne({ accessCode });
+                if (!game) {
+                    return callback({ error: 'Jogo não encontrado.' });
+                }
+
+                const playerInGame = game.players.find(p => p.nickname === playerInfo.nickname);
+
+                if (playerInGame) {
+                    playerInGame.socketId = socket.id;
+                    await game.save();
+                    socket.join(accessCode);
+
+                    io.to(accessCode).emit('kahoot:player_list_update', game.players);
+                    callback({ success: true });
+                } else {
+                    callback({ error: 'Jogador não encontrado na partida.' });
+                }
+            } catch(e) {
+                callback({ error: 'Erro ao tentar reconectar.' });
+            }
+        });
+        
         socket.on('kahoot:start_game', async ({ accessCode }) => {
             const game = await Game.findOneAndUpdate({ accessCode, hostSocketId: socket.id }, { status: 'in_progress' }, { new: true });
             if (game) {
-                // Ao iniciar o jogo, envia o primeiro evento de pergunta para TODOS na sala
                 io.to(accessCode).emit('kahoot:game_started');
                 startNextQuestion(io, accessCode);
             }
         });
         
-        // ... O resto do ficheiro permanece igual ...
         socket.on('kahoot:cancel_game', async ({ accessCode }) => {
             const game = await Game.findOne({ accessCode, hostSocketId: socket.id });
             if (game) {
@@ -151,17 +169,27 @@ async function startNextQuestion(io, accessCode) {
     clearTimeout(gameSession.questionTimer);
     gameSession.questionTimer = setTimeout(async () => {
         const currentGame = await Game.findOne({ accessCode }).populate({path: 'quiz', populate: { path: 'questions' }});
-        const correctAnswerIndex = currentGame.quiz.questions[nextIndex].correctAnswerIndex;
+        const currentQuestion = currentGame.quiz.questions[nextIndex];
+        const correctAnswerIndex = currentQuestion.correctAnswerIndex;
+        
+        const answerDistribution = [0, 0, 0, 0];
+
         gameSession.playerAnswers.forEach((answer, socketId) => {
+            if (answer.answerIndex >= 0 && answer.answerIndex < 4) {
+                answerDistribution[answer.answerIndex]++;
+            }
             const player = currentGame.players.find(p => p.socketId === socketId);
             if (player && answer.answerIndex === correctAnswerIndex) {
                 player.score += calculateScore(answer.timeRemaining);
             }
         });
+        
         await currentGame.save();
+        
         io.to(accessCode).emit('kahoot:round_result', {
             correctAnswerIndex: correctAnswerIndex,
-            ranking: currentGame.players.sort((a, b) => b.score - a.score)
+            ranking: currentGame.players.sort((a, b) => b.score - a.score),
+            answerDistribution: answerDistribution
         });
     }, 15000);
 }

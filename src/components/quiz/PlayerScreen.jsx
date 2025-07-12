@@ -9,12 +9,9 @@ const PlayerScreen = ({ socket }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Função segura para obter as informações iniciais do jogador
     const getInitialPlayerInfo = useCallback(() => {
         const statePlayer = location.state?.player;
-        if (statePlayer) {
-            return statePlayer;
-        }
+        if (statePlayer) return statePlayer;
         try {
             const storedPlayerJSON = sessionStorage.getItem('kahoot_player_info');
             const storedCode = sessionStorage.getItem('kahoot_access_code');
@@ -28,7 +25,7 @@ const PlayerScreen = ({ socket }) => {
     }, [location.state, accessCode]);
 
     const [playerInfo, setPlayerInfo] = useState(getInitialPlayerInfo);
-    const [gameState, setGameState] = useState('connecting'); // connecting, lobby, question, result, finished
+    const [gameState, setGameState] = useState('connecting');
     const [question, setQuestion] = useState(null);
     const [time, setTime] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -37,15 +34,25 @@ const PlayerScreen = ({ socket }) => {
 
     const previousScoreRef = useRef(playerInfo?.score || 0);
 
-    // --- LÓGICA DE SOCKETS TOTALMENTE REESTRUTURADA ---
     useEffect(() => {
-        // Se não houver nenhuma informação do jogador, não há o que fazer.
         if (!playerInfo) {
             navigate(`/quiz/join?code=${accessCode}`, { replace: true });
             return;
         }
 
-        // --- Funções que manipulam eventos do jogo ---
+        const handleReconnect = () => {
+            console.log('Reconectado ao servidor. Tentando reentrar no jogo...');
+            socket.emit('kahoot:player_rejoin', { accessCode, playerInfo }, (response) => {
+                if (response.error) {
+                    alert(`Não foi possível reconectar: ${response.error}`);
+                    sessionStorage.clear();
+                    navigate('/quiz/join');
+                } else {
+                    console.log('Reconexão bem-sucedida!');
+                }
+            });
+        };
+
         const handleNewQuestion = (q) => {
             previousScoreRef.current = playerInfo.score;
             setQuestion(q);
@@ -70,7 +77,7 @@ const PlayerScreen = ({ socket }) => {
             sessionStorage.removeItem('kahoot_player_info');
             sessionStorage.removeItem('kahoot_access_code');
         };
-
+        
         const handleGameCanceled = () => {
             alert('O anfitrião cancelou o jogo.');
             sessionStorage.removeItem('kahoot_player_info');
@@ -78,13 +85,11 @@ const PlayerScreen = ({ socket }) => {
             navigate('/');
         };
         
-        // --- Gerenciamento da Conexão e dos Listeners ---
         function registerGameListeners() {
             socket.on('kahoot:new_question', handleNewQuestion);
             socket.on('kahoot:round_result', handleRoundResult);
             socket.on('kahoot:game_over', handleGameOver);
             socket.on('kahoot:game_canceled', handleGameCanceled);
-            // Uma vez que os listeners estão prontos, mudamos para o lobby.
             setGameState('lobby');
         }
 
@@ -92,26 +97,24 @@ const PlayerScreen = ({ socket }) => {
             socket.off('kahoot:new_question', handleNewQuestion);
             socket.off('kahoot:round_result', handleRoundResult);
             socket.off('kahoot:game_over', handleGameOver);
-            socket.off('kahoot:game_canceled', handleGameCanceled);
+            socket.off('kahoot:game_canceled');
         }
 
-        // Se o socket já estiver conectado quando o componente montar, registramos os listeners.
         if (socket.connected) {
             registerGameListeners();
         } else {
-            // Se não, esperamos o evento 'connect' para garantir que a conexão foi estabelecida.
             socket.once('connect', registerGameListeners);
         }
+        
+        socket.on('connect', handleReconnect);
 
-        // A função de limpeza é CRUCIAL. Ela será executada quando o componente for desmontado.
         return () => {
             unregisterGameListeners();
-            socket.off('connect', registerGameListeners);
+            socket.off('connect', handleReconnect);
         };
         
     }, [socket, playerInfo, accessCode, navigate]);
     
-    // Efeito para o temporizador, separado da lógica principal.
     useEffect(() => {
         if (gameState === 'question' && time > 0) {
             const timer = setTimeout(() => setTime(t => t - 1), 1000);
@@ -126,7 +129,6 @@ const PlayerScreen = ({ socket }) => {
         }
     };
     
-    // O resto do código (shapes, renderContent, etc.) permanece o mesmo...
     const shapes = [
         <path d="M12 2L2 22h20L12 2z" />,
         <rect x="2" y="2" width="20" height="20" rx="4" />,
@@ -135,13 +137,11 @@ const PlayerScreen = ({ socket }) => {
     ];
     const shapeColors = ['bg-red-600', 'bg-blue-600', 'bg-yellow-500', 'bg-green-600'];
 
-    // Guardião de renderização final.
     if (!playerInfo) {
-        return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><p>Redirecionando...</p></div>;
+        return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><LoadingSpinner /></div>;
     }
 
     const renderContent = () => {
-        // ... (esta função não precisa de alterações)
         switch(gameState) {
             case 'connecting':
                 return <LoadingSpinner />;
@@ -181,6 +181,7 @@ const PlayerScreen = ({ socket }) => {
                  const myCurrentData = roundResult.ranking.find(p => p.socketId === playerInfo.socketId);
                  const currentScore = myCurrentData ? myCurrentData.score : playerInfo.score;
                  const isCorrect = currentScore > previousScoreRef.current;
+                 const correctOptionText = question.options[roundResult.correctAnswerIndex];
 
                 return (
                     <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
@@ -188,7 +189,8 @@ const PlayerScreen = ({ socket }) => {
                         <h2 className={`text-5xl font-bold mb-4 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
                             {isCorrect ? 'Correto!' : 'Incorreto'}
                         </h2>
-                        <p className="text-2xl text-white">Sua pontuação: <span className="font-bold">{currentScore}</span></p>
+                        {!isCorrect && <p className="text-xl text-stone-300 mt-2">A resposta correta era: <span className="font-bold">{correctOptionText}</span></p>}
+                        <p className="text-2xl text-white mt-4">Sua pontuação: <span className="font-bold">{currentScore}</span></p>
                     </motion.div>
                 );
             case 'finished':
@@ -205,7 +207,7 @@ const PlayerScreen = ({ socket }) => {
                 return <p>Estado de jogo desconhecido.</p>;
         }
     };
-
+    
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col p-4">
              <header className="flex-shrink-0 flex justify-between items-center bg-black/30 p-4 rounded-t-lg">

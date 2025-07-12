@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { googleLogout, useGoogleLogin } from '@react-oauth/google';
 import { musicHistoryData } from '../data/musicHistoryData';
 
@@ -39,18 +39,15 @@ export const useMusicApp = () => {
 
     const selectedPeriod = useMemo(() => musicHistoryData.find(p => p.id === selectedPeriodId), [selectedPeriodId]);
 
-    useEffect(() => {
-        const fetchLeaderboard = async () => {
-            try {
-                const response = await fetch(`${backendUrl}/api/leaderboard`);
-                if (!response.ok) throw new Error("Falha ao buscar ranking");
-                const data = await response.json();
-                setLeaderboard(data);
-            } catch (error) {
-                console.error("Erro ao carregar o ranking:", error);
-            }
-        };
-        fetchLeaderboard();
+    const fetchLeaderboard = useCallback(async () => {
+        try {
+            const response = await fetch(`${backendUrl}/api/leaderboard`);
+            if (!response.ok) throw new Error("Falha ao buscar ranking");
+            const data = await response.json();
+            setLeaderboard(data);
+        } catch (error) {
+            console.error("Erro ao carregar o ranking:", error);
+        }
     }, []);
 
     const handleOpenModal = (type, data) => setModalContent({ type, data });
@@ -76,7 +73,103 @@ export const useMusicApp = () => {
             }
         }
     };
+    
+    // Função que define o estado do usuário logado
+    const setLoggedInUser = (userFromDb) => {
+        setCurrentUser(userFromDb);
+        setScore(userFromDb.score);
+        setAchievements(userFromDb.achievements || []);
+        setStats(userFromDb.stats || {});
+    };
 
+    // Lógica de logout atualizada
+    const handleLogout = useCallback(() => {
+        googleLogout();
+        localStorage.removeItem('google_access_token');
+        setCurrentUser(null);
+        setScore(0);
+        setAchievements([]);
+        setStats({});
+    }, []);
+
+    // Nova função para verificar sessão ao carregar
+    const checkActiveSession = useCallback(async () => {
+        const accessToken = localStorage.getItem('google_access_token');
+
+        if (accessToken) {
+            try {
+                const googleResponse = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: 'application/json'
+                    }
+                });
+
+                if (!googleResponse.ok) {
+                    throw new Error('Token do Google inválido ou expirado.');
+                }
+                
+                const profile = await googleResponse.json();
+
+                const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile }),
+                });
+
+                if (!backendResponse.ok) {
+                    throw new Error('Falha na autenticação com o backend.');
+                }
+
+                const userFromDb = await backendResponse.json();
+                setLoggedInUser(userFromDb);
+
+            } catch (error) {
+                console.error("Sessão inválida. Realizando logout:", error.message);
+                handleLogout();
+            }
+        }
+    }, [handleLogout]);
+
+    // Lógica de login atualizada
+    const handleLoginSuccess = async (tokenResponse) => {
+        try {
+            localStorage.setItem('google_access_token', tokenResponse.access_token);
+            
+            const googleResponse = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenResponse.access_token}`, {
+                headers: {
+                    Authorization: `Bearer ${tokenResponse.access_token}`,
+                    Accept: 'application/json'
+                }
+            });
+            const profile = await googleResponse.json();
+
+            const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profile }),
+            });
+
+            if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
+            
+            const userFromDb = await backendResponse.json();
+            setLoggedInUser(userFromDb);
+
+        } catch (error) {
+            console.error("Erro no login:", error);
+            handleLogout();
+        }
+    };
+    
+    const handleCustomLogin = useGoogleLogin({
+        onSuccess: handleLoginSuccess,
+        onError: (error) => console.log('Login Failed:', error)
+    });
+
+    useEffect(() => {
+        fetchLeaderboard();
+    }, [fetchLeaderboard]);
+    
     const handleSelectPeriod = (id) => {
         setSelectedPeriodId(id);
         setActiveChallenge(null);
@@ -91,51 +184,6 @@ export const useMusicApp = () => {
                 }
             }
         }
-    };
-
-    // --- NOVA LÓGICA DE LOGIN ---
-    const handleLoginSuccess = async (tokenResponse) => {
-        try {
-            // 1. Usa o access_token para buscar os dados do usuário na API do Google
-            const googleResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + tokenResponse.access_token, {
-                headers: {
-                    Authorization: `Bearer ${tokenResponse.access_token}`,
-                    Accept: 'application/json'
-                }
-            });
-            const profile = await googleResponse.json();
-
-            // 2. Envia o perfil do usuário para o seu backend
-            const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile }), // Envia o objeto de perfil
-            });
-
-            if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
-            
-            const userFromDb = await backendResponse.json();
-            setCurrentUser(userFromDb);
-            setScore(userFromDb.score);
-            setAchievements(userFromDb.achievements || []);
-            setStats(userFromDb.stats || {});
-
-        } catch (error) {
-            console.error("Erro no login:", error);
-        }
-    };
-
-    const handleCustomLogin = useGoogleLogin({
-        onSuccess: handleLoginSuccess,
-        onError: (error) => console.log('Login Failed:', error)
-    });
-
-    const handleLogout = () => {
-        googleLogout();
-        setCurrentUser(null);
-        setScore(0);
-        setAchievements([]);
-        setStats({});
     };
 
     const handleCorrectAnswer = async () => {
@@ -168,9 +216,7 @@ export const useMusicApp = () => {
                     statsUpdate: { correctAnswers: 1, quizzesCompleted: 1 }
                 }),
             });
-            const updatedLeaderboard = await fetch(`${backendUrl}/api/leaderboard`);
-            const data = await updatedLeaderboard.json();
-            setLeaderboard(data);
+            await fetchLeaderboard();
 
             if (selectedPeriodId === 'medieval' && currentPeriodCorrectAnswers >= 10) {
                 checkAndAwardAchievement(ALL_ACHIEVEMENTS.MESTRE_MEDIEVAL);
@@ -185,7 +231,6 @@ export const useMusicApp = () => {
         incorrectSoundRef.current?.play().catch(console.error);
         if (currentUser) {
             const incorrectCount = (stats.incorrectAnswers || 0) + 1;
-            const correctCount = (stats.correctAnswers || 0);
             setStats(prev => ({...prev, incorrectAnswers: incorrectCount}));
             try {
                 await fetch(`${backendUrl}/api/score`, {
@@ -263,7 +308,7 @@ Responda em português do Brasil.`;
             setQuiz({ question: 'Não foi possível criar a pergunta no momento. Por favor, tente novamente.', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
         }
     };
-
+    
     const handleQuizGuess = (guess) => {
         const isCorrect = quiz.answer.trim().toLowerCase() === guess.trim().toLowerCase();
         let feedbackMessage = isCorrect ? 'Correto! Você conhece a história.' : `Incorreto. A resposta correta era: ${quiz.answer}`;
@@ -360,7 +405,7 @@ Responda em português do Brasil.`;
             setTimeline(prev => ({ ...prev, feedback: 'Quase lá! A ordem correta foi revelada.', isChecked: true }));
         }
     };
-
+    
     const handleGenerateFromWhichPeriod = async () => {
         setFromWhichPeriod({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
         const randomPeriod = musicHistoryData[Math.floor(Math.random() * musicHistoryData.length)];
@@ -431,6 +476,7 @@ Responda em português do Brasil.`;
         setActiveChallenge,
         handleCustomLogin,
         handleLogout,
+        checkActiveSession,
         handleGenerateQuiz,
         handleQuizGuess,
         handleGenerateWhoAmI,

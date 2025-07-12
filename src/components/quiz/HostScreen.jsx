@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Clock, Users, ChevronRight, BarChart3, Check } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { Award, Clock, Users, ChevronRight, BarChart3, CheckCircle } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 const HostScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
 
-    // Adicionado 'countdown' ao estado do jogo
-    const [gameState, setGameState] = useState('loading'); // loading, countdown, question, result, finished
+    const [gameState, setGameState] = useState('loading'); // loading, countdown, question, result_distribution, result_scoreboard, finished
+    
     const [game, setGame] = useState(null);
     const [questionData, setQuestionData] = useState(null);
     const [answerCount, setAnswerCount] = useState(0);
     const [time, setTime] = useState(0);
     const [roundResult, setRoundResult] = useState(null);
     const [finalRanking, setFinalRanking] = useState([]);
-    
-    // Novo estado para controlar a contagem regressiva
     const [countdown, setCountdown] = useState(3);
 
     useEffect(() => {
@@ -29,21 +27,23 @@ const HostScreen = ({ socket }) => {
             setTime(q.time);
             setAnswerCount(0);
             setRoundResult(null);
-            setCountdown(3); // Reinicia a contagem
-            setGameState('countdown'); // Inicia pela contagem regressiva
+            setCountdown(3); 
+            setGameState('countdown'); 
         };
         const handleAnswerUpdate = ({ count }) => setAnswerCount(count);
+
         const handleRoundResult = (result) => {
-            setGameState('result');
             setRoundResult(result);
+            setGameState('result_distribution');
         };
+
         const handleGameOver = (data) => {
             setGameState('finished');
             setFinalRanking(data.players);
         };
         const handleGameCanceled = () => {
              alert('O jogo foi cancelado.');
-             navigate('/kahoot/create');
+             navigate('/quiz/create');
         };
 
         socket.on('kahoot:game_data', handleGameData);
@@ -71,13 +71,11 @@ const HostScreen = ({ socket }) => {
         }
     }, [gameState, time]);
 
-    // Novo useEffect para a contagem regressiva
     useEffect(() => {
         if (gameState === 'countdown' && countdown > 0) {
             const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
             return () => clearTimeout(timer);
         } else if (gameState === 'countdown' && countdown === 0) {
-            // Quando a contagem termina, mostra a pergunta
             setGameState('question');
         }
     }, [gameState, countdown]);
@@ -85,6 +83,10 @@ const HostScreen = ({ socket }) => {
     const handleNextQuestion = () => {
         socket.emit('kahoot:next_question', { accessCode });
     };
+
+    const showScoreboard = () => {
+        setGameState('result_scoreboard');
+    }
     
     const shapes = [
         <path d="M12 2L2 22h20L12 2z" />,
@@ -144,37 +146,72 @@ const HostScreen = ({ socket }) => {
                         </div>
                     </div>
                 );
-            case 'result':
-                const rankingColors = [
-                    'bg-yellow-400/20 border-yellow-400', // 1st
-                    'bg-gray-400/20 border-gray-400',   // 2nd
-                    'bg-orange-600/20 border-orange-600' // 3rd
-                ];
+            case 'result_distribution': {
+                if (!roundResult || !questionData) return <LoadingSpinner />;
+                const totalAnswers = roundResult.answerDistribution.reduce((sum, count) => sum + count, 0);
+
                 return (
                     <div className="w-full h-full flex flex-col p-8 items-center justify-center">
-                        <h2 className="text-5xl font-bold text-white mb-8">Ranking da Rodada</h2>
-                        <div className="w-full max-w-2xl space-y-3">
-                             {roundResult.ranking.slice(0, 5).map((player, index) => (
-                                <motion.div
-                                    key={player.socketId}
-                                    initial={{ opacity: 0, x: -50 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className={`flex items-center justify-between p-4 rounded-lg border-2 ${rankingColors[index] || 'bg-gray-800 border-gray-700'}`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-2xl font-bold text-white w-8">{index + 1}</span>
-                                        <p className="text-xl text-white">{player.nickname}</p>
+                        <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-10 text-center">{questionData.text}</h2>
+                        <div className="w-full max-w-3xl space-y-4">
+                            {questionData.options.map((option, index) => {
+                                const isCorrect = index === roundResult.correctAnswerIndex;
+                                const count = roundResult.answerDistribution[index];
+                                const percentage = totalAnswers > 0 ? (count / totalAnswers) * 100 : 0;
+
+                                return (
+                                    <div key={index} className={`relative flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-500 ${isCorrect ? 'border-green-400 shadow-lg shadow-green-400/20' : 'border-transparent bg-black/30'}`}>
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${percentage}%`}}
+                                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                                            className={`absolute top-0 left-0 h-full rounded-md ${isCorrect ? 'bg-green-500/30' : 'bg-gray-700/50'}`}
+                                        />
+                                        <div className="relative z-10 flex items-center gap-4">
+                                            <span className="font-bold text-xl text-white">{option}</span>
+                                            {isCorrect && <CheckCircle className="text-green-400" />}
+                                        </div>
+                                        <span className="relative z-10 font-bold text-xl text-white">{count}</span>
                                     </div>
-                                    <p className="text-xl font-bold text-white">{player.score} pts</p>
-                                </motion.div>
-                            ))}
+                                )
+                            })}
                         </div>
-                        <button onClick={handleNextQuestion} className="mt-12 flex items-center gap-2 px-8 py-4 bg-amber-600 text-black font-bold text-xl rounded-lg hover:bg-amber-500">
+                         <button onClick={showScoreboard} className="mt-12 flex items-center gap-2 px-8 py-4 bg-amber-600 text-black font-bold text-xl rounded-lg hover:bg-amber-500">
+                            Ver Placar <ChevronRight />
+                        </button>
+                    </div>
+                )
+            }
+            case 'result_scoreboard': {
+                if (!roundResult) return <LoadingSpinner />;
+                return (
+                    <div className="w-full h-full flex flex-col p-8 items-center justify-center">
+                        <h2 className="text-5xl font-bold text-white mb-8">Placar</h2>
+                        <div className="w-full max-w-2xl">
+                             <Reorder.Group as="ol" axis="y" values={roundResult.ranking} onReorder={() => {}} className="space-y-3">
+                                {roundResult.ranking.slice(0, 5).map((player, index) => (
+                                    <Reorder.Item 
+                                        key={player.socketId} 
+                                        value={player}
+                                        initial={{ opacity: 0, y: 50 }}
+                                        animate={{ opacity: 1, y: 0, transition: { duration: 0.5, delay: index * 0.1 } }}
+                                        className="flex items-center justify-between p-4 rounded-lg bg-gray-800/50 border-2 border-amber-900/50"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-2xl font-bold text-white w-8">{index + 1}</span>
+                                            <p className="text-xl text-white">{player.nickname}</p>
+                                        </div>
+                                        <p className="text-xl font-bold text-white">{player.score} pts</p>
+                                    </Reorder.Item>
+                                ))}
+                            </Reorder.Group>
+                        </div>
+                        <button onClick={handleNextQuestion} className="mt-12 flex items-center gap-2 px-8 py-4 bg-blue-600 text-white font-bold text-xl rounded-lg hover:bg-blue-500">
                             Próxima Pergunta <ChevronRight />
                         </button>
                     </div>
                 );
+            }
              case 'finished':
                 return (
                     <div className="w-full h-full flex flex-col p-8 items-center justify-center text-center">
@@ -202,7 +239,7 @@ const HostScreen = ({ socket }) => {
                                 </motion.div>
                              ))}
                          </div>
-                         <button onClick={() => navigate('/kahoot/create')} className="mt-12 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500">
+                         <button onClick={() => navigate('/quiz/create')} className="mt-12 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500">
                              Jogar Novamente
                          </button>
                     </div>
@@ -221,7 +258,7 @@ const HostScreen = ({ socket }) => {
                 </div>
                  <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-xl"><Users /> {game.players.length}</div>
-                    <div className="flex items-center gap-2 text-xl"><Check /> {answerCount}</div>
+                    <div className="flex items-center gap-2 text-xl"><BarChart3 /> {answerCount}</div>
                     <div className="flex items-center gap-2 text-xl font-mono bg-black/50 px-3 py-1 rounded"><Clock /> {time}</div>
                 </div>
             </header>

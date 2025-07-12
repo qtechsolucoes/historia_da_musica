@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { Users, Play, Copy, X } from 'lucide-react'; // Importado o ícone 'X'
+import { Users, Play, Copy, X } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 const QuizLobby = ({ socket }) => {
@@ -51,11 +51,10 @@ const QuizLobby = ({ socket }) => {
         socket.emit('kahoot:start_game', { accessCode });
     };
 
-    // --- NOVA FUNÇÃO PARA CANCELAR O JOGO ---
     const handleCancelGame = () => {
         if (window.confirm("Tem a certeza de que deseja cancelar este jogo? Todos os jogadores serão desconectados.")) {
             socket.emit('kahoot:cancel_game', { accessCode });
-            navigate('/'); // Redireciona para a página principal
+            navigate('/');
         }
     };
 
@@ -83,7 +82,6 @@ const QuizLobby = ({ socket }) => {
                     transition={{ delay: 0.2 }}
                     className="md:col-span-1 bg-black/40 p-6 rounded-2xl border border-amber-900/50 flex flex-col items-center justify-center gap-4"
                 >
-                    {/* --- CONTAINER DO CÓDIGO CORRIGIDO --- */}
                     <div className="text-center">
                         <p className="text-stone-300 mb-2">Código de Acesso:</p>
                         <div className="text-6xl font-bold tracking-widest text-white bg-gray-800 px-6 py-4 rounded-lg">
@@ -107,22 +105,17 @@ const QuizLobby = ({ socket }) => {
                 >
                     <h2 className="text-2xl font-bold text-amber-200 mb-4 flex items-center gap-2"><Users /> Jogadores ({players.length})</h2>
                     <div className="flex-grow bg-gray-800/50 rounded-lg p-4 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin">
-                        <AnimatePresence>
-                            {players.length === 0 && <p className="text-center text-stone-400 mt-16">Nenhum jogador ainda...</p>}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {players.length === 0 && <p className="text-center text-stone-400 mt-16">Nenhum jogador ainda...</p>}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {players.map(player => (
-                                <motion.div
+                                <div
                                     key={player.socketId}
-                                    initial={{ scale: 0.5, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0.5, opacity: 0 }}
                                     className="p-3 bg-gray-700 rounded-md text-center font-semibold truncate"
                                 >
                                     {player.nickname}
-                                </motion.div>
+                                </div>
                             ))}
-                            </div>
-                        </AnimatePresence>
+                        </div>
                     </div>
                     <button
                         onClick={handleStartGame}
@@ -131,7 +124,6 @@ const QuizLobby = ({ socket }) => {
                     >
                         <Play /> Iniciar Jogo
                     </button>
-                    {/* --- BOTÃO DE CANCELAR ADICIONADO --- */}
                     <button
                         onClick={handleCancelGame}
                         className="w-full mt-3 flex items-center justify-center gap-2 p-2 bg-red-800/60 text-red-200 text-sm rounded-lg hover:bg-red-700/60 transition-colors"

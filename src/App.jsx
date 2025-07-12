@@ -13,12 +13,16 @@ import Sidebar from './components/Sidebar';
 import LoadingScreen from './components/LoadingScreen';
 import AchievementToast from './components/AchievementToast';
 
-// --- COMPONENTES DO QUIZ MULTIPLAYER ---
 import CreateQuiz from './components/quiz/CreateQuiz';
 import QuizLobby from './components/quiz/QuizLobby';
 import JoinQuiz from './components/quiz/JoinQuiz';
 import PlayerScreen from './components/quiz/PlayerScreen';
 import HostScreen from './components/quiz/HostScreen';
+
+// --- CORREÇÃO: Usar caminhos de string diretos para assets na pasta 'public' ---
+// O Vite irá servir estes arquivos a partir da raiz do servidor.
+const correctSoundUrl = '/assets/audio/correct.mp3';
+const incorrectSoundUrl = '/assets/audio/incorrect.mp3';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const backendUrl = 'http://localhost:5001';
@@ -27,6 +31,10 @@ const socket = io(backendUrl);
 const AppLayout = () => {
     const [hasInteracted, setHasInteracted] = useState(false);
     const musicAppProps = useMusicApp();
+
+    useEffect(() => {
+        musicAppProps.checkActiveSession();
+    }, [musicAppProps.checkActiveSession]);
 
     return (
         <div 
@@ -76,8 +84,8 @@ const AppLayout = () => {
                 achievement={musicAppProps.lastAchievement} 
                 onDismiss={() => musicAppProps.setLastAchievement(null)} 
             />
-             <audio ref={musicAppProps.correctSoundRef} src="/assets/audio/correct.mp3" preload="auto" />
-             <audio ref={musicAppProps.incorrectSoundRef} src="/assets/audio/incorrect.mp3" preload="auto" />
+             <audio ref={musicAppProps.correctSoundRef} src={correctSoundUrl} preload="auto" />
+             <audio ref={musicAppProps.incorrectSoundRef} src={incorrectSoundUrl} preload="auto" />
         </div>
     );
 };
@@ -95,7 +103,7 @@ export default function App() {
         <GoogleOAuthProvider clientId={googleClientId}>
             <div className="h-screen w-screen bg-gray-900">
                 <style>{`
-                    @import url('[https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap](https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap)');
+                    @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
                     body { background-color: #111827; overflow: hidden; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
                     .font-title { font-family: 'MedievalSharp', cursive; }
                     .font-serif { font-family: 'Times New Roman', Times, serif; }
@@ -119,17 +127,12 @@ export default function App() {
                                 transition={{ duration: 1.0 }}
                             >
                                 <Routes>
-                                    {/* --- INÍCIO DA CORREÇÃO --- */}
-                                    {/* A página principal agora responde apenas ao caminho raiz "/" */}
                                     <Route path="/" element={<AppLayout />} />
-
-                                    {/* As rotas do quiz são independentes e não entram em conflito com a principal */}
                                     <Route path="/quiz/create" element={<CreateQuiz socket={socket} />} />
                                     <Route path="/quiz/lobby/:accessCode" element={<QuizLobby socket={socket} />} />
                                     <Route path="/quiz/join" element={<JoinQuiz socket={socket} />} />
                                     <Route path="/quiz/play/:accessCode" element={<PlayerScreen socket={socket} />} />
                                     <Route path="/quiz/host/:accessCode" element={<HostScreen socket={socket} />} />
-                                    {/* --- FIM DA CORREÇÃO --- */}
                                 </Routes>
                             </motion.div>
                         </BrowserRouter>
