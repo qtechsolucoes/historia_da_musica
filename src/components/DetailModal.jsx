@@ -3,9 +3,6 @@ import { X, Sparkles, MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from './LoadingSpinner';
 
-// A CHAVE DE API FOI REMOVIDA DAQUI
-// const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
 const modalLayouts = {
   composer: 'max-w-6xl h-[90vh]',
   instrument: 'max-w-7xl',

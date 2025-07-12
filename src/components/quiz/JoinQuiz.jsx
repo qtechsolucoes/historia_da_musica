@@ -30,6 +30,19 @@ const JoinQuiz = ({ socket }) => {
             if (response.error) {
                 setError(response.error);
             } else {
+                // --- INÍCIO DA CORREÇÃO ---
+                // Salvamos os dados essenciais na sessão do navegador.
+                // Isso garante que os dados não se percam no redirecionamento.
+                try {
+                    sessionStorage.setItem('kahoot_player_info', JSON.stringify(response.player));
+                    sessionStorage.setItem('kahoot_access_code', accessCode);
+                } catch (sessionError) {
+                    console.error("Falha ao salvar dados na sessão:", sessionError);
+                    setError("O seu navegador não suporta o armazenamento de sessão, o que é necessário para jogar.");
+                    return;
+                }
+                // --- FIM DA CORREÇÃO ---
+
                 // Navega para a tela do jogador, passando os dados essenciais
                 navigate(`/quiz/play/${accessCode}`, { state: { player: response.player } });
             }

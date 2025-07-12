@@ -43,7 +43,6 @@ const AppLayout = () => {
                 score={musicAppProps.score}
                 achievements={musicAppProps.achievements}
                 stats={musicAppProps.stats}
-                // LINHA CORRIGIDA ABAIXO
                 onCustomLogin={musicAppProps.handleCustomLogin} 
                 onLogout={musicAppProps.handleLogout}
             />
@@ -96,7 +95,7 @@ export default function App() {
         <GoogleOAuthProvider clientId={googleClientId}>
             <div className="h-screen w-screen bg-gray-900">
                 <style>{`
-                    @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');
+                    @import url('[https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap](https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap)');
                     body { background-color: #111827; overflow: hidden; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; }
                     .font-title { font-family: 'MedievalSharp', cursive; }
                     .font-serif { font-family: 'Times New Roman', Times, serif; }
@@ -120,14 +119,17 @@ export default function App() {
                                 transition={{ duration: 1.0 }}
                             >
                                 <Routes>
-                                    <Route path="/*" element={<AppLayout />} />
+                                    {/* --- INÍCIO DA CORREÇÃO --- */}
+                                    {/* A página principal agora responde apenas ao caminho raiz "/" */}
+                                    <Route path="/" element={<AppLayout />} />
 
+                                    {/* As rotas do quiz são independentes e não entram em conflito com a principal */}
                                     <Route path="/quiz/create" element={<CreateQuiz socket={socket} />} />
                                     <Route path="/quiz/lobby/:accessCode" element={<QuizLobby socket={socket} />} />
                                     <Route path="/quiz/join" element={<JoinQuiz socket={socket} />} />
                                     <Route path="/quiz/play/:accessCode" element={<PlayerScreen socket={socket} />} />
                                     <Route path="/quiz/host/:accessCode" element={<HostScreen socket={socket} />} />
-
+                                    {/* --- FIM DA CORREÇÃO --- */}
                                 </Routes>
                             </motion.div>
                         </BrowserRouter>

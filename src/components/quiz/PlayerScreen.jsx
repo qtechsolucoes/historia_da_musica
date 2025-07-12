@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Award, CheckCircle, XCircle } from 'lucide-react';
@@ -8,11 +8,26 @@ const PlayerScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    
-    // playerInfo é a única informação que confiamos do 'navigate'
-    const [playerInfo, setPlayerInfo] = useState(location.state?.player || null);
-    
-    // Estados principais que controlam a UI
+
+    // Função segura para obter as informações iniciais do jogador
+    const getInitialPlayerInfo = useCallback(() => {
+        const statePlayer = location.state?.player;
+        if (statePlayer) {
+            return statePlayer;
+        }
+        try {
+            const storedPlayerJSON = sessionStorage.getItem('kahoot_player_info');
+            const storedCode = sessionStorage.getItem('kahoot_access_code');
+            if (storedPlayerJSON && storedCode === accessCode) {
+                return JSON.parse(storedPlayerJSON);
+            }
+        } catch (e) {
+            console.error("Falha ao ler dados da sessão:", e);
+        }
+        return null;
+    }, [location.state, accessCode]);
+
+    const [playerInfo, setPlayerInfo] = useState(getInitialPlayerInfo);
     const [gameState, setGameState] = useState('connecting'); // connecting, lobby, question, result, finished
     const [question, setQuestion] = useState(null);
     const [time, setTime] = useState(0);
@@ -20,19 +35,19 @@ const PlayerScreen = ({ socket }) => {
     const [roundResult, setRoundResult] = useState(null);
     const [finalRanking, setFinalRanking] = useState([]);
 
-    // Usamos uma ref para guardar a pontuação anterior e evitar re-renderizações desnecessárias
     const previousScoreRef = useRef(playerInfo?.score || 0);
 
+    // --- LÓGICA DE SOCKETS TOTALMENTE REESTRUTURADA ---
     useEffect(() => {
-        // Se não houver dados do jogador (ex: refresh da página), volta para o início
+        // Se não houver nenhuma informação do jogador, não há o que fazer.
         if (!playerInfo) {
-            navigate('/quiz/join');
+            navigate(`/quiz/join?code=${accessCode}`, { replace: true });
             return;
         }
 
-        // --- LÓGICA DE SOCKETS REESTRUTURADA ---
+        // --- Funções que manipulam eventos do jogo ---
         const handleNewQuestion = (q) => {
-            previousScoreRef.current = playerInfo.score; // Guarda a pontuação antes da pergunta
+            previousScoreRef.current = playerInfo.score;
             setQuestion(q);
             setSelectedAnswer(null);
             setRoundResult(null);
@@ -44,7 +59,6 @@ const PlayerScreen = ({ socket }) => {
             setRoundResult(result);
             const myResult = result.ranking.find(p => p.socketId === playerInfo.socketId);
             if (myResult) {
-                // Atualiza a informação do jogador, incluindo a nova pontuação
                 setPlayerInfo(prev => ({ ...prev, score: myResult.score }));
             }
             setGameState('result');
@@ -53,31 +67,51 @@ const PlayerScreen = ({ socket }) => {
         const handleGameOver = (data) => {
             setFinalRanking(data.players);
             setGameState('finished');
+            sessionStorage.removeItem('kahoot_player_info');
+            sessionStorage.removeItem('kahoot_access_code');
         };
-        
+
         const handleGameCanceled = () => {
             alert('O anfitrião cancelou o jogo.');
+            sessionStorage.removeItem('kahoot_player_info');
+            sessionStorage.removeItem('kahoot_access_code');
             navigate('/');
         };
         
-        // Os listeners são registados UMA VEZ quando o componente monta
-        socket.on('kahoot:new_question', handleNewQuestion);
-        socket.on('kahoot:round_result', handleRoundResult);
-        socket.on('kahoot:game_over', handleGameOver);
-        socket.on('kahoot:game_canceled', handleGameCanceled);
+        // --- Gerenciamento da Conexão e dos Listeners ---
+        function registerGameListeners() {
+            socket.on('kahoot:new_question', handleNewQuestion);
+            socket.on('kahoot:round_result', handleRoundResult);
+            socket.on('kahoot:game_over', handleGameOver);
+            socket.on('kahoot:game_canceled', handleGameCanceled);
+            // Uma vez que os listeners estão prontos, mudamos para o lobby.
+            setGameState('lobby');
+        }
 
-        // Ao entrar, o estado inicial é 'lobby'
-        setGameState('lobby');
-
-        // A função de limpeza remove os listeners QUANDO O COMPONENTE DESMONTA
-        return () => {
+        function unregisterGameListeners() {
             socket.off('kahoot:new_question', handleNewQuestion);
             socket.off('kahoot:round_result', handleRoundResult);
             socket.off('kahoot:game_over', handleGameOver);
             socket.off('kahoot:game_canceled', handleGameCanceled);
-        };
-    }, [socket, playerInfo, accessCode, navigate]);
+        }
 
+        // Se o socket já estiver conectado quando o componente montar, registramos os listeners.
+        if (socket.connected) {
+            registerGameListeners();
+        } else {
+            // Se não, esperamos o evento 'connect' para garantir que a conexão foi estabelecida.
+            socket.once('connect', registerGameListeners);
+        }
+
+        // A função de limpeza é CRUCIAL. Ela será executada quando o componente for desmontado.
+        return () => {
+            unregisterGameListeners();
+            socket.off('connect', registerGameListeners);
+        };
+        
+    }, [socket, playerInfo, accessCode, navigate]);
+    
+    // Efeito para o temporizador, separado da lógica principal.
     useEffect(() => {
         if (gameState === 'question' && time > 0) {
             const timer = setTimeout(() => setTime(t => t - 1), 1000);
@@ -92,6 +126,7 @@ const PlayerScreen = ({ socket }) => {
         }
     };
     
+    // O resto do código (shapes, renderContent, etc.) permanece o mesmo...
     const shapes = [
         <path d="M12 2L2 22h20L12 2z" />,
         <rect x="2" y="2" width="20" height="20" rx="4" />,
@@ -100,7 +135,13 @@ const PlayerScreen = ({ socket }) => {
     ];
     const shapeColors = ['bg-red-600', 'bg-blue-600', 'bg-yellow-500', 'bg-green-600'];
 
+    // Guardião de renderização final.
+    if (!playerInfo) {
+        return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><p>Redirecionando...</p></div>;
+    }
+
     const renderContent = () => {
+        // ... (esta função não precisa de alterações)
         switch(gameState) {
             case 'connecting':
                 return <LoadingSpinner />;
@@ -164,11 +205,6 @@ const PlayerScreen = ({ socket }) => {
                 return <p>Estado de jogo desconhecido.</p>;
         }
     };
-    
-    if (!playerInfo) {
-        // Este return é uma salvaguarda, o useEffect já deve ter redirecionado
-        return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><p>Redirecionando...</p></div>;
-    }
 
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col p-4">
