@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Gamepad2, ChevronRight } from 'lucide-react';
+import { Gamepad2, ChevronRight, ArrowLeft } from 'lucide-react'; // Adicionado ArrowLeft
 import LoadingSpinner from '../LoadingSpinner';
 
-const JoinKahoot = ({ socket }) => {
+const JoinQuiz = ({ socket }) => { // Nome do componente padronizado
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Extrai o código da URL, se existir
     const urlParams = new URLSearchParams(location.search);
     const initialCode = urlParams.get('code') || '';
 
@@ -18,7 +17,6 @@ const JoinKahoot = ({ socket }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        // Limpa ouvintes de eventos anteriores ao montar o componente
         socket.off('kahoot:game_data');
         socket.off('error');
     }, [socket]);
@@ -37,8 +35,13 @@ const JoinKahoot = ({ socket }) => {
             if (response.error) {
                 setError(response.error);
             } else {
-                // Navega para a tela do jogador com os dados do jogo
-                navigate(`/kahoot/play/${accessCode}`, { state: { player: response.player, game: response.game } });
+                // --- NOVA LÓGICA DE PERSISTÊNCIA ---
+                // CUIDADO: sessionStorage é usado para guardar os dados do jogador no navegador.
+                // Isto é crucial para a reconexão. Se esta linha for removida, a reconexão falhará.
+                // Usamos JSON.stringify para armazenar o objeto como uma string.
+                sessionStorage.setItem('kahootPlayer', JSON.stringify({ nickname: response.player.nickname, accessCode }));
+                
+                navigate(`/quiz/play/${accessCode}`, { state: { player: response.player, game: response.game } });
             }
         });
     };
@@ -50,8 +53,16 @@ const JoinKahoot = ({ socket }) => {
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="w-full max-w-md bg-black/50 backdrop-blur-sm p-8 rounded-2xl border border-blue-800/50 shadow-2xl"
+                className="w-full max-w-md bg-black/50 backdrop-blur-sm p-8 rounded-2xl border border-blue-800/50 shadow-2xl relative"
             >
+                <button 
+                    onClick={() => navigate('/')} 
+                    className="absolute top-4 left-4 p-2 text-stone-300 hover:text-blue-300 hover:bg-gray-700 rounded-full transition-colors"
+                    aria-label="Voltar"
+                >
+                    <ArrowLeft size={24} />
+                </button>
+
                 <div className="text-center mb-8">
                     <Gamepad2 className="mx-auto text-blue-400 mb-3" size={48} />
                     <h1 className="text-4xl font-title text-blue-300">Entrar no Jogo</h1>
@@ -66,7 +77,7 @@ const JoinKahoot = ({ socket }) => {
                             value={accessCode}
                             onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
                             className="w-full p-3 bg-gray-700 border border-blue-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest font-bold"
-                            placeholder="ABC123"
+                            placeholder="CÓDIGO"
                             required
                         />
                     </div>
@@ -99,4 +110,4 @@ const JoinKahoot = ({ socket }) => {
     );
 };
 
-export default JoinKahoot;
+export default JoinQuiz; // Nome do componente padronizado
