@@ -40,14 +40,22 @@ async function endRound(io, accessCode) {
 }
 
 async function startNextQuestion(io, accessCode) {
+    const gameSession = activeGames[accessCode];
+    if (!gameSession || gameSession.isStartingNextQuestion) {
+        return; // Retorna imediatamente se uma transição já estiver em andamento.
+    }
+    gameSession.isStartingNextQuestion = true;
+
     if (gameTimers[accessCode]) {
         clearInterval(gameTimers[accessCode].tickInterval);
         clearTimeout(gameTimers[accessCode].endRoundTimeout);
     }
 
     const game = await Game.findOne({ accessCode }).populate({ path: 'quiz', populate: { path: 'questions' } });
-    const gameSession = activeGames[accessCode];
-    if (!game || !gameSession || game.status !== 'in_progress') return;
+    if (!game || game.status !== 'in_progress') {
+        if(gameSession) gameSession.isStartingNextQuestion = false;
+        return;
+    }
     
     const nextIndex = game.currentQuestionIndex + 1;
     if (nextIndex >= game.quiz.questions.length) {
@@ -71,7 +79,9 @@ async function startNextQuestion(io, accessCode) {
         time: 15,
         totalQuestions: game.quiz.questions.length
     };
+    
     io.to(accessCode).emit('kahoot:new_question', questionData);
+    gameSession.isStartingNextQuestion = false; // Libera o bloqueio
     
     let timeRemaining = questionData.time;
     const tickInterval = setInterval(() => {
@@ -97,7 +107,11 @@ function initializeKahootManager(io) {
                 game.hostSocketId = socket.id;
                 await game.save();
                 if (!activeGames[accessCode]) {
-                    activeGames[accessCode] = { playerAnswers: new Map() };
+                    // CORREÇÃO: Inicializa a flag de bloqueio aqui
+                    activeGames[accessCode] = { 
+                        playerAnswers: new Map(),
+                        isStartingNextQuestion: false 
+                    };
                 }
                 socket.emit('kahoot:game_data', game);
                 io.to(socket.id).emit('kahoot:player_list_update', game.players);

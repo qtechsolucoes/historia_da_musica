@@ -8,7 +8,6 @@ const HostScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
 
-    // Máquina de Estados expandida para o novo fluxo
     const [gameState, setGameState] = useState('countdown'); 
     const [game, setGame] = useState(null);
     const [questionData, setQuestionData] = useState(null);
@@ -35,7 +34,7 @@ const HostScreen = ({ socket }) => {
         const handleTimerUpdate = ({ timeRemaining }) => setTime(timeRemaining);
         const handleAnswerUpdate = ({ count }) => setAnswerCount(count);
         const handleRoundResult = (result) => {
-            setGameState('answer_result'); // CORREÇÃO APLICADA AQUI
+            setGameState('answer_result');
             setRoundResult(result);
         };
         const handleGameOver = (data) => {
@@ -64,11 +63,11 @@ const HostScreen = ({ socket }) => {
             socket.off('kahoot:game_over', handleGameOver);
             socket.off('kahoot:game_canceled', handleGameCanceled);
         };
-    }, [socket, accessCode, navigate, roundResult]);
+    }, [socket, accessCode, navigate]); // <-- CORREÇÃO: Removido 'roundResult' da matriz de dependências
 
     useEffect(() => {
         if (gameState !== 'countdown') return;
-        setRoundResult(null); 
+
         const timer = setInterval(() => {
             setCountdown(c => {
                 if (c > 1) return c - 1;
@@ -80,7 +79,9 @@ const HostScreen = ({ socket }) => {
         return () => clearInterval(timer);
     }, [gameState, socket, accessCode]);
 
+
     const handleNextQuestion = () => {
+        setCountdown(3); // Reinicia a contagem
         setGameState('countdown');
     };
     
@@ -178,7 +179,7 @@ const HostScreen = ({ socket }) => {
                                             className={`w-full rounded-t-lg ${shapeColors[index]}`}
                                         />
                                         <div className="mt-4">
-                                            {isCorrect ? <CheckCircle size={40} className="text-green-400" /> : <XCircle size={40} className="text-white/30" />}
+                                            {isCorrect ? <CheckCircle size={40} className="text-green-400" /> : <div className="w-[40px] h-[40px]"></div>}
                                         </div>
                                     </div>
                                 );
@@ -209,7 +210,7 @@ const HostScreen = ({ socket }) => {
                                     >
                                         <span className="text-2xl font-bold w-12 text-center">{index + 1}</span>
                                         <p className="text-2xl flex-grow font-semibold">{player.nickname}</p>
-                                        <div className="flex items-center gap-2 mx-4">{change.icon}</div>
+                                        <div className={`flex items-center gap-2 mx-4 ${change.color}`}>{change.icon}</div>
                                         <p className="text-2xl font-bold text-amber-300 w-32 text-right">{player.score} pts</p>
                                     </motion.div>
                                 );
