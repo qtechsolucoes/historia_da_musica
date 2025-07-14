@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Sparkles, MessageSquare, Send, ArrowLeft } from 'lucide-react';
+import { X, Sparkles, MessageSquare, Send, ArrowLeft, FileText } from 'lucide-react'; // Ícone FileText adicionado
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingSpinner from './LoadingSpinner';
-
-// A CHAVE DE API FOI REMOVIDA DAQUI
-// const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 const modalLayouts = {
   composer: 'max-w-6xl h-[90vh]',
@@ -119,20 +116,15 @@ const DetailModal = ({ content, onClose }) => {
     };
 
     const renderDetails = () => {
-        // ... (o conteúdo desta função permanece inalterado)
         switch (type) {
-            // ### INÍCIO DA ÁREA MODIFICADA ###
             case 'composer':
                 return (
                     <div className="flex flex-col md:flex-row gap-6 h-full">
-                        {/* Coluna da Esquerda: Imagem (Sempre visível) */}
                         <div className="w-full md:w-80 flex-shrink-0">
                             <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full h-auto object-cover rounded-md shadow-lg border-2 border-amber-900/50"/>
                         </div>
                         
-                        {/* Coluna da Direita: Conteúdo dinâmico (Bio ou Chat) */}
                         <div className="flex-1 flex flex-col min-h-0">
-                            {/* Visualização da Biografia (Padrão) */}
                             {!showChat && (
                                 <motion.div
                                     key="info-view"
@@ -142,7 +134,7 @@ const DetailModal = ({ content, onClose }) => {
                                     <div className="flex-shrink-0">
                                         <p className="font-semibold text-amber-200">{data.lifespan}</p>
                                     </div>
-                                    <div className="flex-grow overflow-y-auto scrollbar-thin my-4 pr-3">
+                                    <div className="flex-grow overflow-y-auto scrollbar-custom my-4 pr-3">
                                         <div className="text-stone-300 text-justify">
                                             {(data.bio || '').split('\n\n').map((p, i) => <p key={i} className="mb-4 last:mb-0">{p}</p>)}
                                         </div>
@@ -160,7 +152,6 @@ const DetailModal = ({ content, onClose }) => {
                                 </motion.div>
                             )}
 
-                            {/* Visualização do Chat (Expandido) */}
                             {showChat && (
                                 <motion.div
                                     key="chat-view"
@@ -172,7 +163,7 @@ const DetailModal = ({ content, onClose }) => {
                                         Voltar à Biografia
                                     </button>
                                     <div className="flex-grow flex flex-col bg-black/30 rounded-md border border-amber-900/50 overflow-hidden">
-                                        <div className="flex-grow p-4 overflow-y-auto flex flex-col space-y-2 scrollbar-thin">
+                                        <div className="flex-grow p-4 overflow-y-auto flex flex-col space-y-2 scrollbar-custom">
                                             {chatHistory.length === 0 && (
                                                 <div className="text-center text-stone-400 text-sm m-auto">
                                                     Faça uma pergunta a {data.name} sobre sua vida, suas obras ou sua época.
@@ -205,12 +196,10 @@ const DetailModal = ({ content, onClose }) => {
                         </div>
                     </div>
                 );
-             // ### FIM DA ÁREA MODIFICADA ###
-            
             case 'instrument':
                 return (
-                   <div className="flex flex-col lg:flex-row gap-8 items-stretch">
-                       <div className="lg:w-3/5 flex flex-col">
+                   <div className="flex flex-col lg:flex-row gap-8 items-stretch h-full">
+                       <div className="lg:w-3/5 flex flex-col overflow-y-auto scrollbar-custom pr-2">
                            <div className="flex flex-col md:flex-row gap-6 items-start">
                                {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
                                <div className="flex-1 text-stone-300 leading-relaxed text-justify">
@@ -240,9 +229,9 @@ const DetailModal = ({ content, onClose }) => {
             case 'genre':
             case 'style':
                 return (
-                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                    <div className="flex flex-col md:flex-row gap-6 items-start h-full">
                        {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
-                       <div className="flex-1 max-h-[calc(95vh-10rem)] overflow-y-auto scrollbar-thin pr-2 text-stone-300 leading-relaxed text-justify">
+                       <div className="flex-1 max-h-full overflow-y-auto scrollbar-custom pr-2 text-stone-300 leading-relaxed text-justify">
                           {(data.description || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">{p}</p>)}
                        </div>
                     </div>
@@ -264,25 +253,43 @@ const DetailModal = ({ content, onClose }) => {
                             </iframe>
                         </div>
                         
-                        <div className="flex-shrink-0">
-                            <div className="max-h-24 overflow-y-auto scrollbar-thin pr-2 text-stone-300 italic leading-relaxed mb-4 text-justify">
+                        <div className="flex-shrink-0 space-y-4">
+                            <div className="max-h-24 overflow-y-auto scrollbar-custom pr-2 text-stone-300 italic leading-relaxed text-justify">
                                 {(data.analysis || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">"{p}"</p>)}
                             </div>
-                            <div className="border-t border-amber-900/50 pt-4">
-                                <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
+                            
+                            <div className="border-t border-amber-900/50 pt-4 flex flex-wrap gap-4">
+                                <button onClick={() => handleGenerateAnalysis(data.title, data.composer)} disabled={isAnalysisLoading} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
                                     <Sparkles size={18} />
-                                    {isAnalysisLoading ? 'Analisando...' : '✨ Análise Aprofundada com Inteligência Artificial'}
+                                    {isAnalysisLoading ? 'Analisando...' : '✨ Análise com IA'}
                                 </button>
-                                {isAnalysisLoading && <LoadingSpinner />}
-                                {generatedAnalysis && (
-                                    <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50 max-h-40 overflow-y-auto scrollbar-thin">
-                                        <h4 className="font-bold text-amber-200 mb-2">Análise da Inteligência Artificial:</h4>
-                                        <div className="text-stone-300 text-justify">
-                                            {(generatedAnalysis || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">{p}</p>)}
-                                        </div>
-                                    </div>
+                                {data.sheetMusicUrl && (
+                                    <a 
+                                        href={data.sheetMusicUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all"
+                                    >
+                                        <FileText size={18} />
+                                        Ver Partitura
+                                    </a>
                                 )}
                             </div>
+
+                            {isAnalysisLoading && <LoadingSpinner />}
+                            
+                            {generatedAnalysis && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }} 
+                                    animate={{ opacity: 1, height: 'auto' }} 
+                                    className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50 max-h-40 overflow-y-auto scrollbar-custom"
+                                >
+                                    <h4 className="font-bold text-amber-200 mb-2">Análise da Inteligência Artificial:</h4>
+                                    <div className="text-stone-300 text-justify">
+                                        {(generatedAnalysis || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">{p}</p>)}
+                                    </div>
+                                </motion.div>
+                            )}
                         </div>
                     </div>
                 );
@@ -307,12 +314,14 @@ const DetailModal = ({ content, onClose }) => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className={`bg-gray-900 bg-opacity-90 backdrop-blur-sm rounded-lg shadow-2xl w-full p-6 md:p-8 border border-amber-800/60 relative flex flex-col ${layoutClass} max-h-[95vh]`}
+                        className={`bg-gray-900 bg-opacity-95 backdrop-blur-sm rounded-lg shadow-2xl w-full p-6 md:p-8 border border-amber-800/60 relative flex flex-col ${layoutClass} max-h-[95vh]`}
                         onClick={e => e.stopPropagation()}
                     >
                         <h2 className="text-3xl font-bold text-amber-300 mb-4 font-title flex-shrink-0">{title}</h2>
-                        <div className="flex-grow overflow-hidden">
-                           <div className="text-base text-stone-300 leading-relaxed h-full">{renderDetails()}</div>
+                        <div className="flex-grow overflow-hidden relative">
+                           <div className="absolute inset-0 overflow-y-auto scrollbar-custom pr-2">
+                               {renderDetails()}
+                           </div>
                         </div>
                         <button onClick={onClose} className="absolute top-3 right-3 text-stone-400 hover:text-amber-300 hover:bg-gray-700 rounded-full p-2 transition-colors" aria-label="Fechar modal">
                             <X size={24} />
