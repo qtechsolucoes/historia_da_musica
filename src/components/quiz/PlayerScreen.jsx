@@ -5,22 +5,15 @@ import { Award, CheckCircle, XCircle, Clock, WifiOff } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 // --- Componentes de View Puros ---
-// Estes componentes apenas renderizam UI com base nas props recebidas.
 
-const ConnectingView = () => (
-    <div className="text-center">
-        <LoadingSpinner />
-        <p className="mt-2 text-stone-300 animate-pulse">Conectando ao jogo...</p>
-    </div>
-);
-
-const LobbyView = () => (
+const WaitingView = () => (
     <div className="text-center">
         <h2 className="text-3xl text-amber-200">Você está no jogo!</h2>
         <p className="text-stone-300 mt-2">Aguarde o anfitrião iniciar a partida.</p>
         <LoadingSpinner />
     </div>
 );
+
 
 const QuestionView = ({ question, time, onAnswer, selectedAnswer }) => {
     const shapes = [
@@ -34,17 +27,21 @@ const QuestionView = ({ question, time, onAnswer, selectedAnswer }) => {
     if (!question) return <LoadingSpinner />;
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full">
-            <div className="absolute top-4 right-4 text-3xl font-bold bg-black/50 px-4 py-2 rounded-full">{time}</div>
-            <div className="grid grid-cols-2 gap-4 h-full">
-                {question.options.map((_, index) => (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full flex flex-col p-4">
+            <div className="w-full flex justify-between items-center mb-4">
+                <h2 className="text-xl md:text-2xl text-white flex-grow text-center">{question.text}</h2>
+                <div className="text-3xl font-bold text-white bg-black/50 px-4 py-2 rounded-full">{time}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 flex-grow">
+                {question.options.map((option, index) => (
                     <button
                         key={index}
                         onClick={() => onAnswer(index)}
                         disabled={selectedAnswer !== null}
-                        className={`flex items-center justify-center p-4 rounded-lg text-white font-bold text-xl transition-all duration-300 ${shapeColors[index]} ${selectedAnswer !== null ? (selectedAnswer === index ? 'opacity-100 scale-105 ring-4 ring-white' : 'opacity-50') : 'hover:scale-105 hover:opacity-90'}`}
+                        className={`flex flex-col items-center justify-center p-4 rounded-lg text-white font-bold text-xl transition-all duration-300 ${shapeColors[index]} ${selectedAnswer !== null ? (selectedAnswer === index ? 'opacity-100 scale-105 ring-4 ring-white' : 'opacity-50') : 'hover:scale-105 hover:opacity-90'}`}
                     >
-                        <svg viewBox="0 0 24 24" className="w-16 h-16 fill-current">{shapes[index]}</svg>
+                        <svg viewBox="0 0 24 24" className="w-12 h-12 fill-current mb-2">{shapes[index]}</svg>
+                        <span className="text-lg text-center">{option}</span>
                     </button>
                 ))}
             </div>
@@ -52,12 +49,10 @@ const QuestionView = ({ question, time, onAnswer, selectedAnswer }) => {
     );
 };
 
-const ResultView = ({ roundResult, player, previousScore }) => {
-    if (!roundResult || !player) return <div className="text-center text-xl text-white animate-pulse">Aguardando resultados...</div>;
-
-    const myCurrentData = roundResult.ranking.find(p => p.nickname === player.nickname);
-    const myScoreGained = myCurrentData ? myCurrentData.score - previousScore : 0;
-    const isCorrect = myScoreGained > 0;
+const ResultView = ({ roundResult, selectedAnswer }) => {
+    if (!roundResult) return <div className="text-center text-xl text-white animate-pulse">Aguardando resultados...</div>;
+    
+    const isCorrect = selectedAnswer === roundResult.correctAnswerIndex;
     
     return (
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
@@ -65,8 +60,7 @@ const ResultView = ({ roundResult, player, previousScore }) => {
             <h2 className={`text-5xl font-bold mb-2 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
                 {isCorrect ? 'Correto!' : 'Incorreto'}
             </h2>
-            {isCorrect && <p className="text-xl text-green-300 mb-4">+{myScoreGained} pontos</p>}
-            <p className="text-2xl text-white">Sua pontuação: <span className="font-bold">{myCurrentData?.score || player.score}</span></p>
+            <p className="text-stone-400 mt-4">Aguardando a próxima pergunta...</p>
         </motion.div>
     );
 };
@@ -83,7 +77,7 @@ const FinishedView = ({ finalRanking, player }) => {
                 <p className="text-3xl text-white mt-4">Sua posição final: <span className="font-bold">{myRank}º</span></p> :
                 <p className="text-3xl text-white mt-4">Você não foi classificado.</p>
             }
-            <p className="text-2xl text-stone-300">Pontuação final: <span className="font-bold">{myFinalData?.score || player?.score || 0}</span></p>
+            <p className="text-2xl text-stone-300">Pontuação final: <span className="font-bold">{myFinalData?.score || 0}</span></p>
         </motion.div>
     );
 };
@@ -91,133 +85,74 @@ const FinishedView = ({ finalRanking, player }) => {
 const ErrorView = ({ message }) => (
     <div className="text-center text-red-400">
         <WifiOff size={48} className="mx-auto mb-4" />
-        <h2 className="text-2xl font-bold">Erro de Conexão</h2>
+        <h2 className="text-2xl font-bold">Erro</h2>
         <p>{message}</p>
     </div>
 );
 
-// --- Componente Renderizador de Estados ---
-const GameStateRenderer = ({ gameState, ...props }) => {
-    switch (gameState) {
-        case 'lobby': return <LobbyView />;
-        case 'question': return <QuestionView {...props} />;
-        case 'result': return <ResultView {...props} />;
-        case 'finished': return <FinishedView {...props} />;
-        case 'error': return <ErrorView {...props} />;
-        case 'initializing':
-        case 'joining':
-        default: return <ConnectingView />;
-    }
-};
 
-// --- COMPONENTE PRINCIPAL (LÓGICA DE MÁQUINA DE ESTADOS FINAL) ---
 const PlayerScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
     
-    const [gameData, setGameData] = useState({
-        gameState: 'initializing', // Estado inicial neutro, esperando o socket conectar
-        player: null,
-        game: null,
-        question: null,
-        roundResult: null,
-        finalRanking: [],
-        error: '',
-    });
-    
+    const [gameState, setGameState] = useState('waiting_for_question');
+    const [player, setPlayer] = useState(null);
+    const [question, setQuestion] = useState(null);
     const [time, setTime] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState(null);
-    const previousScoreRef = useRef(0);
+    const [roundResult, setRoundResult] = useState(null);
+    const [finalRanking, setFinalRanking] = useState([]);
 
-    // Efeito principal que gerencia TODO o ciclo de vida da conexão e do jogo
     useEffect(() => {
-        // Função para entrar no jogo, chamada apenas quando o socket está conectado.
-        const joinGame = () => {
-            const savedPlayerData = sessionStorage.getItem('kahootPlayer');
-            if (!savedPlayerData) {
-                setGameData(prev => ({ ...prev, gameState: 'error', error: 'Sessão de jogador não encontrada. Por favor, entre novamente.' }));
-                return;
-            }
-            
-            const { nickname } = JSON.parse(savedPlayerData);
-            setGameData(prev => ({ ...prev, gameState: 'joining' })); // Muda para o estado 'joining'
+        const savedPlayer = sessionStorage.getItem('kahootPlayer');
+        if (savedPlayer) {
+            setPlayer(JSON.parse(savedPlayer));
+        } else {
+            navigate('/quiz/join');
+            return; 
+        }
 
-            socket.emit('kahoot:player_rejoin', { accessCode, nickname }, (response) => {
-                if (response.error) {
-                    setGameData(prev => ({ ...prev, gameState: 'error', error: response.error }));
-                    sessionStorage.removeItem('kahootPlayer');
-                } else {
-                    // SUCESSO! Define o estado inicial do jogo com os dados do servidor.
-                    previousScoreRef.current = response.player.score;
-                    setGameData({
-                        player: response.player,
-                        game: response.game,
-                        gameState: response.game.status || 'lobby',
-                        question: response.currentQuestion,
-                        roundResult: null,
-                        finalRanking: [],
-                        error: '',
-                    });
-                }
-            });
-        };
-
-        // Listeners de eventos do jogo
         const handleNewQuestion = (q) => {
+            setQuestion(q);
             setSelectedAnswer(null);
-            setTime(q.time || 15);
-            setGameData(prev => {
-                if (prev.player) previousScoreRef.current = prev.player.score;
-                return { ...prev, gameState: 'question', question: q, roundResult: null };
-            });
+            setRoundResult(null);
+            setGameState('question');
         };
+
+        const handleTimerUpdate = ({ timeRemaining }) => {
+            setTime(timeRemaining);
+        };
+
         const handleRoundResult = (result) => {
-            setGameData(prev => {
-                const myResult = result.ranking.find(p => p.nickname === prev.player?.nickname);
-                const updatedPlayer = myResult ? { ...prev.player, score: myResult.score } : prev.player;
-                return { ...prev, gameState: 'result', roundResult: result, player: updatedPlayer };
-            });
+            setRoundResult(result);
+            setGameState('result');
         };
+
         const handleGameOver = (data) => {
-            setGameData(prev => ({ ...prev, gameState: 'finished', finalRanking: data.players }));
+            setGameState('finished');
+            setFinalRanking(data.players);
             sessionStorage.removeItem('kahootPlayer');
         };
-        const handleGameCanceled = ({ message }) => {
-            alert(message || 'O jogo foi cancelado.');
-            sessionStorage.removeItem('kahootPlayer');
+
+        const handleGameCanceled = (data) => {
+            alert(data.message || 'O jogo foi cancelado.');
             navigate('/quiz/create');
         };
-
-        // Configura os listeners
+        
         socket.on('kahoot:new_question', handleNewQuestion);
+        socket.on('kahoot:timer_update', handleTimerUpdate);
         socket.on('kahoot:round_result', handleRoundResult);
         socket.on('kahoot:game_over', handleGameOver);
         socket.on('kahoot:game_canceled', handleGameCanceled);
-        socket.on('connect', joinGame); // Chama joinGame QUANDO o socket se (re)conecta
 
-        // Se o socket já estiver conectado na montagem, chama joinGame imediatamente.
-        if (socket.connected) {
-            joinGame();
-        }
-
-        // Função de limpeza para remover todos os listeners
         return () => {
             socket.off('kahoot:new_question', handleNewQuestion);
+            socket.off('kahoot:timer_update', handleTimerUpdate);
             socket.off('kahoot:round_result', handleRoundResult);
             socket.off('kahoot:game_over', handleGameOver);
             socket.off('kahoot:game_canceled', handleGameCanceled);
-            socket.off('connect', joinGame);
         };
-    }, [socket, accessCode, navigate]);
-    
-    // Timer da pergunta
-    useEffect(() => {
-        let timer;
-        if (gameData.gameState === 'question' && time > 0) {
-            timer = setTimeout(() => setTime(t => t - 1), 1000);
-        }
-        return () => clearTimeout(timer);
-    }, [gameData.gameState, time]);
+    }, [socket, navigate]);
 
     const handleAnswerClick = (answerIndex) => {
         if (selectedAnswer === null) {
@@ -226,36 +161,42 @@ const PlayerScreen = ({ socket }) => {
         }
     };
     
-    const score = gameData.roundResult?.ranking.find(p => p.nickname === gameData.player?.nickname)?.score ?? gameData.player?.score ?? 0;
-    
+    const score = roundResult?.ranking.find(p => p.nickname === player?.nickname)?.score ?? 0;
+
+    const renderMainContent = () => {
+        switch (gameState) {
+            case 'question':
+                return <QuestionView question={question} time={time} onAnswer={handleAnswerClick} selectedAnswer={selectedAnswer} />;
+            case 'result':
+                return <ResultView roundResult={roundResult} selectedAnswer={selectedAnswer} />;
+            case 'finished':
+                return <FinishedView finalRanking={finalRanking} player={player} />;
+            case 'waiting_for_question':
+                 return <WaitingView />;
+            case 'error':
+                 return <ErrorView message="A sessão do jogo não foi encontrada." />;
+            default:
+                return <LoadingSpinner />;
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col p-4">
              <header className="flex-shrink-0 flex justify-between items-center bg-black/30 p-4 rounded-t-lg">
-                <h2 className="text-xl font-bold text-white truncate">{gameData.player?.nickname || 'Aguardando...'}</h2>
+                <h2 className="text-xl font-bold text-white truncate">{player?.nickname || 'Jogador'}</h2>
                 <div className="text-xl font-bold text-amber-300">{score} pts</div>
             </header>
             <main className="flex-grow flex items-center justify-center bg-black/20 p-4 rounded-b-lg relative">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={gameData.gameState}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0, position: 'absolute' }}
-                        transition={{ duration: 0.2 }}
+                        key={gameState}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20, position: 'absolute' }}
+                        transition={{ duration: 0.3 }}
                         className="w-full h-full flex items-center justify-center"
                     >
-                        <GameStateRenderer 
-                            gameState={gameData.gameState}
-                            question={gameData.question}
-                            time={time}
-                            onAnswer={handleAnswerClick}
-                            selectedAnswer={selectedAnswer}
-                            roundResult={gameData.roundResult}
-                            player={gameData.player}
-                            previousScore={previousScoreRef.current}
-                            finalRanking={gameData.finalRanking}
-                            message={gameData.error}
-                        />
+                        {renderMainContent()}
                     </motion.div>
                 </AnimatePresence>
             </main>

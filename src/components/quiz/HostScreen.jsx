@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Clock, Users, ChevronRight, Check } from 'lucide-react';
+import { Award, Clock, Users, ChevronRight, Check, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 const HostScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
 
-    const [gameState, setGameState] = useState('loading');
+    // Máquina de Estados expandida para o novo fluxo
+    const [gameState, setGameState] = useState('countdown'); 
     const [game, setGame] = useState(null);
     const [questionData, setQuestionData] = useState(null);
     const [answerCount, setAnswerCount] = useState(0);
@@ -16,19 +17,22 @@ const HostScreen = ({ socket }) => {
     const [roundResult, setRoundResult] = useState(null);
     const [finalRanking, setFinalRanking] = useState([]);
     const [countdown, setCountdown] = useState(3);
+    const previousRanking = useRef([]);
 
     useEffect(() => {
         socket.emit('kahoot:host_join', { accessCode });
 
         const handleGameData = (data) => setGame(data);
         const handleNewQuestion = (q) => {
+            if (roundResult) {
+                previousRanking.current = roundResult.ranking;
+            }
             setQuestionData(q);
-            setTime(q.time);
             setAnswerCount(0);
             setRoundResult(null);
-            setCountdown(3);
-            setGameState('countdown');
+            setGameState('question');
         };
+        const handleTimerUpdate = ({ timeRemaining }) => setTime(timeRemaining);
         const handleAnswerUpdate = ({ count }) => setAnswerCount(count);
         const handleRoundResult = (result) => {
             setGameState('result');
@@ -39,12 +43,13 @@ const HostScreen = ({ socket }) => {
             setFinalRanking(data.players);
         };
         const handleGameCanceled = () => {
-             alert('O jogo foi cancelado.');
-             navigate('/quiz/create');
+            alert('O jogo foi cancelado.');
+            navigate('/quiz/create');
         };
 
         socket.on('kahoot:game_data', handleGameData);
         socket.on('kahoot:new_question', handleNewQuestion);
+        socket.on('kahoot:timer_update', handleTimerUpdate);
         socket.on('kahoot:answer_update', handleAnswerUpdate);
         socket.on('kahoot:round_result', handleRoundResult);
         socket.on('kahoot:game_over', handleGameOver);
@@ -53,31 +58,42 @@ const HostScreen = ({ socket }) => {
         return () => {
             socket.off('kahoot:game_data', handleGameData);
             socket.off('kahoot:new_question', handleNewQuestion);
+            socket.off('kahoot:timer_update', handleTimerUpdate);
             socket.off('kahoot:answer_update', handleAnswerUpdate);
             socket.off('kahoot:round_result', handleRoundResult);
             socket.off('kahoot:game_over', handleGameOver);
             socket.off('kahoot:game_canceled', handleGameCanceled);
         };
-    }, [accessCode, socket, navigate]);
+    }, [socket, accessCode, navigate, roundResult]);
 
     useEffect(() => {
-        if (gameState === 'question' && time > 0) {
-            const timer = setTimeout(() => setTime(t => t - 1), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [gameState, time]);
-
-    useEffect(() => {
-        if (gameState === 'countdown' && countdown > 0) {
-            const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-            return () => clearTimeout(timer);
-        } else if (gameState === 'countdown' && countdown === 0) {
-            setGameState('question');
-        }
-    }, [gameState, countdown]);
+        if (gameState !== 'countdown') return;
+        setRoundResult(null); 
+        const timer = setInterval(() => {
+            setCountdown(c => {
+                if (c > 1) return c - 1;
+                clearInterval(timer);
+                socket.emit('kahoot:request_next_question', { accessCode });
+                return 0;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [gameState, socket, accessCode]);
 
     const handleNextQuestion = () => {
-        socket.emit('kahoot:next_question', { accessCode });
+        setGameState('countdown');
+    };
+    
+    const handleShowScoreboard = () => {
+        setGameState('scoreboard');
+    };
+
+    const getRankingChange = (player, newIndex) => {
+        const oldIndex = previousRanking.current.findIndex(p => p._id === player._id);
+        if (oldIndex === -1 || previousRanking.current.length === 0) return { icon: <Minus size={16} />, color: 'text-gray-500' };
+        if (oldIndex > newIndex) return { icon: <ArrowUp size={16} />, color: 'text-green-500' };
+        if (oldIndex < newIndex) return { icon: <ArrowDown size={16} />, color: 'text-red-500' };
+        return { icon: <Minus size={16} />, color: 'text-gray-500' };
     };
     
     const shapes = [
@@ -96,7 +112,8 @@ const HostScreen = ({ socket }) => {
         switch (gameState) {
             case 'countdown':
                 return (
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex flex-col items-center justify-center h-full text-white bg-gray-800">
+                         <h2 className="text-4xl font-bold mb-4">A próxima pergunta está a chegar...</h2>
                         <AnimatePresence>
                             <motion.div
                                 key={countdown}
@@ -104,16 +121,17 @@ const HostScreen = ({ socket }) => {
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.5, opacity: 0, position: 'absolute' }}
                                 transition={{ duration: 0.5 }}
-                                className="text-9xl font-bold text-white"
+                                className="text-9xl font-bold text-amber-300"
                             >
-                                {countdown}
+                                {countdown > 0 ? countdown : 'VAI!'}
                             </motion.div>
                         </AnimatePresence>
                     </div>
                 );
             case 'question':
+                if (!questionData) return <LoadingSpinner />
                 return (
-                    <div className="w-full h-full flex flex-col p-8">
+                    <div className="w-full h-full flex flex-col p-8 bg-gray-800">
                         <div className="flex-grow text-center flex items-center justify-center">
                             <motion.h2
                                 key={questionData.text}
@@ -140,34 +158,66 @@ const HostScreen = ({ socket }) => {
                         </div>
                     </div>
                 );
-            case 'result':
-                const rankingColors = [
-                    'bg-yellow-400/20 border-yellow-400',
-                    'bg-gray-400/20 border-gray-400',
-                    'bg-orange-600/20 border-orange-600'
-                ];
+            case 'answer_result':
+                if (!roundResult) return <LoadingSpinner />;
+                const totalAnswers = Object.values(roundResult.answerDistribution).reduce((sum, count) => sum + count, 0);
                 return (
-                    <div className="w-full h-full flex flex-col p-8 items-center justify-center">
-                        <h2 className="text-5xl font-bold text-white mb-8">Ranking da Rodada</h2>
-                        <div className="w-full max-w-2xl space-y-3">
-                             {roundResult.ranking.slice(0, 5).map((player, index) => (
-                                <motion.div
-                                    key={player._id}
-                                    initial={{ opacity: 0, x: -50 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className={`flex items-center justify-between p-4 rounded-lg border-2 ${rankingColors[index] || 'bg-gray-800 border-gray-700'}`}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-2xl font-bold text-white w-8">{index + 1}</span>
-                                        <p className="text-xl text-white">{player.nickname}</p>
+                    <div className="w-full h-full flex flex-col p-6 items-center justify-between bg-gray-800 text-white">
+                        <motion.h1 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-4xl font-bold">Respostas</motion.h1>
+                        
+                        <div className="w-full max-w-3xl flex justify-around items-end gap-4 h-64">
+                            {Object.entries(roundResult.answerDistribution).map(([index, count]) => {
+                                const isCorrect = parseInt(index) === roundResult.correctAnswerIndex;
+                                return (
+                                    <div key={index} className="w-1/4 flex flex-col items-center justify-end h-full">
+                                        <motion.div initial={{y: 20, opacity: 0}} animate={{y: 0, opacity: 1}} transition={{delay: 0.5}} className="text-2xl font-bold mb-2">{count}</motion.div>
+                                        <motion.div
+                                            initial={{ height: 0 }}
+                                            animate={{ height: `${totalAnswers > 0 ? (count / totalAnswers) * 100 : 0}%` }}
+                                            transition={{ duration: 0.5, ease: "easeOut" }}
+                                            className={`w-full rounded-t-lg ${shapeColors[index]}`}
+                                        />
+                                        <div className="mt-4">
+                                            {isCorrect ? <CheckCircle size={40} className="text-green-400" /> : <XCircle size={40} className="text-white/30" />}
+                                        </div>
                                     </div>
-                                    <p className="text-xl font-bold text-white">{player.score} pts</p>
-                                </motion.div>
-                            ))}
+                                );
+                            })}
                         </div>
-                        <button onClick={handleNextQuestion} className="mt-12 flex items-center gap-2 px-8 py-4 bg-amber-600 text-black font-bold text-xl rounded-lg hover:bg-amber-500">
-                            Próxima Pergunta <ChevronRight />
+
+                        <button onClick={handleShowScoreboard} className="px-12 py-3 bg-gray-700 text-white font-bold text-2xl rounded-lg hover:bg-gray-600">
+                            Ver Ranking
+                        </button>
+                    </div>
+                );
+            case 'scoreboard':
+                if (!roundResult) return <LoadingSpinner />;
+                return (
+                    <div className="w-full h-full flex flex-col p-6 items-center justify-between bg-gray-900 text-white">
+                        <motion.h1 initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} className="text-5xl font-bold text-amber-300">Ranking</motion.h1>
+                        
+                        <div className="w-full max-w-2xl space-y-2">
+                            {roundResult.ranking.slice(0, 5).map((player, index) => {
+                                const change = getRankingChange(player, index);
+                                return (
+                                    <motion.div
+                                        key={player._id}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.1, type: "spring", stiffness: 120 }}
+                                        className="flex items-center p-4 rounded-lg bg-white/10 shadow-lg"
+                                    >
+                                        <span className="text-2xl font-bold w-12 text-center">{index + 1}</span>
+                                        <p className="text-2xl flex-grow font-semibold">{player.nickname}</p>
+                                        <div className="flex items-center gap-2 mx-4">{change.icon}</div>
+                                        <p className="text-2xl font-bold text-amber-300 w-32 text-right">{player.score} pts</p>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                        
+                        <button onClick={handleNextQuestion} className="w-full max-w-md p-4 bg-amber-600 text-black font-bold text-2xl rounded-lg hover:bg-amber-500 shadow-lg">
+                            Próxima Pergunta
                         </button>
                     </div>
                 );
@@ -178,7 +228,7 @@ const HostScreen = ({ socket }) => {
                          <h2 className="text-6xl font-bold text-yellow-300">Vencedor!</h2>
                          <h3 className="text-5xl font-title text-white mt-4 mb-10">{finalRanking[0]?.nickname}</h3>
                          <div className="w-full max-w-3xl space-y-4">
-                             {finalRanking.map((player, index) => (
+                             {finalRanking.slice(0, 3).map((player, index) => (
                                 <motion.div
                                     key={player._id}
                                     initial={{ opacity: 0, scale: 0.8 }}
@@ -210,15 +260,14 @@ const HostScreen = ({ socket }) => {
     
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-            <header className="flex-shrink-0 flex justify-between items-center bg-black/40 p-4">
+            <header className="flex-shrink-0 flex justify-between items-center bg-black/40 p-4 border-b-2 border-gray-700">
                 <div className="flex items-center gap-4">
-                    <h1 className="text-2xl font-bold">{game.title}</h1>
-                    <span className="px-3 py-1 bg-gray-700 text-sm rounded-full">{questionData ? `Questão ${questionData.index + 1} de ${questionData.totalQuestions}` : `Lobby`}</span>
+                    <span className="px-4 py-2 bg-gray-700 text-lg font-bold rounded-md">{questionData ? `Questão ${questionData.index + 1} / ${questionData.totalQuestions}` : `Iniciando...`}</span>
                 </div>
-                 <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-xl"><Users /> {connectedPlayerCount}</div>
-                    <div className="flex items-center gap-2 text-xl"><Check /> {answerCount}</div>
-                    <div className="flex items-center gap-2 text-xl font-mono bg-black/50 px-3 py-1 rounded"><Clock /> {time}</div>
+                 <div className="flex items-center gap-6 text-xl">
+                    <div className="flex items-center gap-2"><Users /> {connectedPlayerCount}</div>
+                    <div className="flex items-center gap-2"><Check /> {answerCount}</div>
+                    <div className="flex items-center gap-2 font-mono bg-black/50 px-4 py-2 rounded-md"><Clock size={20} /> {time < 0 ? 0 : time}</div>
                 </div>
             </header>
             <main className="flex-grow relative">
@@ -228,7 +277,7 @@ const HostScreen = ({ socket }) => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5 }}
+                        transition={{ duration: 0.3 }}
                         className="absolute inset-0"
                     >
                          {renderContent()}
