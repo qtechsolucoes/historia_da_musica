@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Clock, Users, ChevronRight, Check, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Award, Clock, Users, ChevronRight, Check, ArrowUp, ArrowDown, Minus, CheckCircle, XCircle } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 const HostScreen = ({ socket }) => {
@@ -35,7 +35,7 @@ const HostScreen = ({ socket }) => {
         const handleTimerUpdate = ({ timeRemaining }) => setTime(timeRemaining);
         const handleAnswerUpdate = ({ count }) => setAnswerCount(count);
         const handleRoundResult = (result) => {
-            setGameState('result');
+            setGameState('answer_result'); // CORREÇÃO APLICADA AQUI
             setRoundResult(result);
         };
         const handleGameOver = (data) => {
