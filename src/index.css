@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- APLICA A SCROLLBAR PERSONALIZADA GLOBALMENTE --- */
+html, body {
+    scrollbar-width: thin;
+    scrollbar-color: #a38b71 rgba(0,0,0,0.2);
+}
+
+html::-webkit-scrollbar, body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+html::-webkit-scrollbar-track, body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb {
+    background: #a38b71;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover {
+    background: #c0a58a;
+}
+
+
 /* Efeito de texto dourado para o título */
 .gold-text-effect {
     background-image: linear-gradient(
@@ -42,3 +66,9 @@
         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.6), 0 0 5px rgba(255, 215, 0, 0.4);
     }
 }
+
+/* Classe de scrollbar para elementos internos, se necessário */
+.scrollbar-custom::-webkit-scrollbar { width: 8px; height: 8px; }
+.scrollbar-custom::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+.scrollbar-custom::-webkit-scrollbar-thumb { background: #a38b71; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+.scrollbar-custom::-webkit-scrollbar-thumb:hover { background: #c0a58a; }
