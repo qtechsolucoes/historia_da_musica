@@ -10,22 +10,29 @@ const JoinQuiz = ({ socket }) => {
     const urlParams = new URLSearchParams(location.search);
     const initialCode = urlParams.get('code') || '';
 
-    // Estados para controlar o formulário e o lobby
     const [accessCode, setAccessCode] = useState(initialCode);
     const [nickname, setNickname] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [gameJoined, setGameJoined] = useState(false); // Novo estado para controlar a UI
+    const [gameJoined, setGameJoined] = useState(false);
+    const [user, setUser] = useState(null);
 
-    // Listener para o início do jogo
+    useEffect(() => {
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+            const parsedUser = JSON.parse(savedUser);
+            setUser(parsedUser);
+            setNickname(parsedUser.name);
+        }
+    }, []);
+
     useEffect(() => {
         const handleGameStarted = () => {
-            // A navegação só ocorre AGORA, quando o host inicia o jogo.
             navigate(`/quiz/play/${accessCode}`);
         };
         const handleGameCanceled = () => {
             alert("O anfitrião cancelou o jogo.");
-            setGameJoined(false); // Volta para a tela de join
+            setGameJoined(false);
         };
 
         socket.on('kahoot:game_started', handleGameStarted);
@@ -46,18 +53,17 @@ const JoinQuiz = ({ socket }) => {
         setIsLoading(true);
         setError('');
 
-        socket.emit('kahoot:player_join', { accessCode, nickname }, (response) => {
+        socket.emit('kahoot:player_join', { accessCode, nickname, user }, (response) => {
             setIsLoading(false);
             if (response.error) {
                 setError(response.error);
             } else {
                 sessionStorage.setItem('kahootPlayer', JSON.stringify({ nickname: response.player.nickname, accessCode }));
-                setGameJoined(true); // TRANSFORMA o componente na tela de lobby
+                setGameJoined(true);
             }
         });
     };
 
-    // Renderização do Lobby de Espera
     if (gameJoined) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -72,7 +78,6 @@ const JoinQuiz = ({ socket }) => {
         );
     }
 
-    // Renderização do Formulário de Entrada (Padrão)
     return (
         <div className="min-h-screen bg-gray-800 text-white flex items-center justify-center p-4">
             <motion.div
@@ -114,7 +119,8 @@ const JoinQuiz = ({ socket }) => {
                             id="nickname"
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
-                            className="w-full p-3 bg-gray-700 border border-blue-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            readOnly={!!user}
+                            className="w-full p-3 bg-gray-700 border border-blue-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-600"
                             placeholder="Seu nome no jogo"
                             required
                         />

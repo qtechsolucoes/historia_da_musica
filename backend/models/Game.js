@@ -4,7 +4,9 @@ const playerSchema = new mongoose.Schema({
     socketId: { type: String, required: true },
     nickname: { type: String, required: true },
     score: { type: Number, default: 0 },
-    connected: { type: Boolean, default: true } // <-- CAMPO ESSENCIAL
+    connected: { type: Boolean, default: true },
+    email: { type: String, sparse: true },
+    picture: { type: String }
 });
 
 const gameSchema = new mongoose.Schema({
@@ -14,7 +16,7 @@ const gameSchema = new mongoose.Schema({
     status: { type: String, enum: ['lobby', 'in_progress', 'finished'], default: 'lobby' },
     currentQuestionIndex: { type: Number, default: -1 },
     players: [playerSchema],
-    createdAt: { type: Date, default: Date.now, expires: '6h' } // Expira jogos inativos
+    createdAt: { type: Date, default: Date.now, expires: '6h' }
 });
 
 module.exports = mongoose.model('Game', gameSchema);

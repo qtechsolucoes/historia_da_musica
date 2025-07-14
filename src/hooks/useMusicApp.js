@@ -40,6 +40,22 @@ export const useMusicApp = () => {
     const selectedPeriod = useMemo(() => musicHistoryData.find(p => p.id === selectedPeriodId), [selectedPeriodId]);
 
     useEffect(() => {
+        try {
+            const loggedInUser = localStorage.getItem('user');
+            if (loggedInUser) {
+                const user = JSON.parse(loggedInUser);
+                setCurrentUser(user);
+                setScore(user.score || 0);
+                setAchievements(user.achievements || []);
+                setStats(user.stats || {});
+            }
+        } catch (error) {
+            console.error("Falha ao carregar usuário do localStorage:", error);
+            localStorage.removeItem('user');
+        }
+    }, []);
+
+    useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
                 const response = await fetch(`${backendUrl}/api/leaderboard`);
@@ -93,10 +109,8 @@ export const useMusicApp = () => {
         }
     };
 
-    // --- NOVA LÓGICA DE LOGIN ---
     const handleLoginSuccess = async (tokenResponse) => {
         try {
-            // 1. Usa o access_token para buscar os dados do usuário na API do Google
             const googleResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + tokenResponse.access_token, {
                 headers: {
                     Authorization: `Bearer ${tokenResponse.access_token}`,
@@ -105,16 +119,16 @@ export const useMusicApp = () => {
             });
             const profile = await googleResponse.json();
 
-            // 2. Envia o perfil do usuário para o seu backend
             const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile }), // Envia o objeto de perfil
+                body: JSON.stringify({ profile }),
             });
 
             if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
             
             const userFromDb = await backendResponse.json();
+            localStorage.setItem('user', JSON.stringify(userFromDb));
             setCurrentUser(userFromDb);
             setScore(userFromDb.score);
             setAchievements(userFromDb.achievements || []);
@@ -136,6 +150,7 @@ export const useMusicApp = () => {
         setScore(0);
         setAchievements([]);
         setStats({});
+        localStorage.removeItem('user');
     };
 
     const handleCorrectAnswer = async () => {
@@ -185,7 +200,6 @@ export const useMusicApp = () => {
         incorrectSoundRef.current?.play().catch(console.error);
         if (currentUser) {
             const incorrectCount = (stats.incorrectAnswers || 0) + 1;
-            const correctCount = (stats.correctAnswers || 0);
             setStats(prev => ({...prev, incorrectAnswers: incorrectCount}));
             try {
                 await fetch(`${backendUrl}/api/score`, {
@@ -349,14 +363,24 @@ Responda em português do Brasil.`;
         });
     };
     
-    const handleCheckTimeline = (userOrder) => {
-        const userOrderNames = userOrder.map(item => item.name);
-        const allCorrect = JSON.stringify(userOrderNames) === JSON.stringify(timeline.correctOrder);
-        if (allCorrect) {
+    const handleCheckTimeline = (userOrder, setTimelineItems) => {
+        let isOrderCorrect = true;
+        for (let i = 1; i < userOrder.length; i++) {
+            const prevYear = getBirthYear(userOrder[i - 1].lifespan);
+            const currentYear = getBirthYear(userOrder[i].lifespan);
+            if (prevYear > currentYear) {
+                isOrderCorrect = false;
+                break;
+            }
+        }
+    
+        if (isOrderCorrect) {
             handleCorrectAnswer();
             setTimeline(prev => ({ ...prev, feedback: 'Perfeito! A ordem está correta.', isChecked: true }));
         } else {
             handleIncorrectAnswer();
+            const correctItems = [...timeline.items].sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan));
+            setTimelineItems(correctItems);
             setTimeline(prev => ({ ...prev, feedback: 'Quase lá! A ordem correta foi revelada.', isChecked: true }));
         }
     };

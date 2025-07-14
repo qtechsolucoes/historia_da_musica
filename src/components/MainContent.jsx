@@ -316,7 +316,7 @@ const MainContent = ({
                                 <Sparkles size={18} />
                                 {timeline.isLoading ? 'Gerando...' : 'Gerar Novo Desafio'}
                             </button>
-                            <button onClick={() => onCheckTimeline(timelineItems)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button onClick={() => onCheckTimeline(timelineItems, setTimelineItems)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                 Verificar Ordem
                             </button>
                         </div>

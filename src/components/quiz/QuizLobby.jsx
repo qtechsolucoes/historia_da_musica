@@ -116,17 +116,22 @@ const QuizLobby = ({ socket }) => {
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {players.filter(p => p && p._id).map(player => (
                                 <motion.div
-                                    key={player._id} // <-- CHAVE DEFINITIVA E ESTÁVEL
+                                    key={player._id}
                                     layout
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.5, opacity: 0 }}
-                                    className={`p-3 rounded-md text-center font-semibold truncate transition-all ${
+                                    className={`p-2 rounded-md font-semibold transition-all flex flex-col items-center justify-center gap-2 ${
                                         player.connected ? 'bg-gray-700' : 'bg-red-900/50 text-stone-400 opacity-60'
                                     }`}
                                     title={!player.connected ? `${player.nickname} (desconectado)` : player.nickname}
                                 >
-                                    {player.nickname}
+                                    {player.picture ? (
+                                        <img src={player.picture} alt={player.nickname} className="w-12 h-12 rounded-full border-2 border-amber-500"/>
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-full bg-gray-600 flex items-center justify-center text-xl">?</div>
+                                    )}
+                                    <span className="truncate w-full text-center text-sm">{player.nickname}</span>
                                 </motion.div>
                             ))}
                             </div>

@@ -1,13 +1,12 @@
 const Game = require('../models/Game');
 
 const activeGames = {};
-const gameTimers = {}; // Objeto para gerenciar timers
+const gameTimers = {};
 
 function calculateScore(timeRemaining) {
     return Math.max(0, Math.floor(1000 * (timeRemaining / 15)));
 }
 
-// Função para encerrar uma rodada de forma limpa
 async function endRound(io, accessCode) {
     const game = await Game.findOne({ accessCode }).populate({ path: 'quiz', populate: { path: 'questions' } });
     const gameSession = activeGames[accessCode];
@@ -40,9 +39,7 @@ async function endRound(io, accessCode) {
     });
 }
 
-// Função para iniciar a próxima pergunta com a nova lógica de timer
 async function startNextQuestion(io, accessCode) {
-    // Limpa rigorosamente quaisquer timers anteriores para este jogo
     if (gameTimers[accessCode]) {
         clearInterval(gameTimers[accessCode].tickInterval);
         clearTimeout(gameTimers[accessCode].endRoundTimeout);
@@ -83,15 +80,13 @@ async function startNextQuestion(io, accessCode) {
     }, 1000);
 
     const endRoundTimeout = setTimeout(() => {
-        clearInterval(tickInterval); // Para o relógio visual
-        endRound(io, accessCode);   // Finaliza a rodada
-    }, questionData.time * 1000 + 500); // 500ms de margem
+        clearInterval(tickInterval);
+        endRound(io, accessCode);
+    }, questionData.time * 1000 + 500);
 
     gameTimers[accessCode] = { tickInterval, endRoundTimeout };
 }
 
-// A função initializeKahootManager permanece a mesma, pois a lógica de conexão
-// e de eventos de alto nível já está correta.
 function initializeKahootManager(io) {
     io.on('connection', (socket) => {
         
@@ -111,7 +106,7 @@ function initializeKahootManager(io) {
             }
         });
 
-        socket.on('kahoot:player_join', async ({ accessCode, nickname }, callback) => {
+        socket.on('kahoot:player_join', async ({ accessCode, nickname, user }, callback) => {
             const game = await Game.findOne({ accessCode });
             if (!game) return callback({ error: 'Jogo não encontrado.' });
             if (game.status !== 'lobby') return callback({ error: 'Este jogo já começou.' });
@@ -120,7 +115,16 @@ function initializeKahootManager(io) {
             }
 
             socket.join(accessCode);
-            const newPlayer = { socketId: socket.id, nickname, score: 0, connected: true };
+            
+            const newPlayer = {
+                socketId: socket.id,
+                nickname,
+                score: 0,
+                connected: true,
+                email: user ? user.email : undefined,
+                picture: user ? user.picture : undefined
+            };
+            
             game.players.push(newPlayer);
             await game.save();
             
