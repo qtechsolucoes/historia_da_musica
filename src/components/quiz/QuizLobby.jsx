@@ -27,7 +27,7 @@ const QuizLobby = ({ socket }) => {
         const handleGameStarted = () => {
             navigate(`/quiz/host/${accessCode}`);
         };
-        
+
         const handleGameCanceled = ({ message }) => {
             alert(message || 'O jogo foi cancelado.');
             navigate('/quiz/create');
@@ -39,15 +39,20 @@ const QuizLobby = ({ socket }) => {
         socket.on('kahoot:game_canceled', handleGameCanceled);
 
         return () => {
-            socket.off('kahoot:game_data');
-            socket.off('kahoot:player_list_update');
-            socket.off('kahoot:game_started');
-            socket.off('kahoot:game_canceled');
+            socket.off('kahoot:game_data', handleGameData);
+            socket.off('kahoot:player_list_update', handlePlayerUpdate);
+            socket.off('kahoot:game_started', handleGameStarted);
+            socket.off('kahoot:game_canceled', handleGameCanceled);
         };
     }, [accessCode, socket, navigate]);
 
     const handleStartGame = () => {
-        socket.emit('kahoot:start_game', { accessCode });
+        const connectedPlayers = players.filter(p => p.connected);
+        if (connectedPlayers.length > 0) {
+            socket.emit('kahoot:start_game', { accessCode });
+        } else {
+            alert("Não há jogadores conectados para iniciar o jogo.");
+        }
     };
 
     const handleCancelGame = () => {
@@ -65,8 +70,10 @@ const QuizLobby = ({ socket }) => {
     };
 
     const joinUrl = `${window.location.origin}/historia_da_musica/quiz/join?code=${accessCode}`;
-    
+
     if (!game) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><LoadingSpinner /></div>;
+
+    const connectedPlayerCount = players.filter(p => p.connected).length;
 
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
@@ -102,23 +109,22 @@ const QuizLobby = ({ socket }) => {
                     transition={{ delay: 0.4 }}
                     className="md:col-span-2 bg-black/40 p-6 rounded-2xl border border-amber-900/50 flex flex-col"
                 >
-                    <h2 className="text-2xl font-bold text-amber-200 mb-4 flex items-center gap-2"><Users /> Jogadores ({players.length})</h2>
+                    <h2 className="text-2xl font-bold text-amber-200 mb-4 flex items-center gap-2"><Users /> Jogadores ({connectedPlayerCount})</h2>
                     <div className="flex-grow bg-gray-800/50 rounded-lg p-4 min-h-[200px] max-h-[400px] overflow-y-auto scrollbar-thin">
                         <AnimatePresence>
                             {players.length === 0 && <p className="text-center text-stone-400 mt-16">Nenhum jogador ainda...</p>}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {/* --- SOLUÇÃO VIOLENTA PARA O BUG DA CHAVE --- */}
-                            {/* CUIDADO: Filtramos o array antes de renderizar. */}
-                            {/* Isto garante que NUNCA tentaremos renderizar um jogador que seja nulo, indefinido */}
-                            {/* ou que não tenha um socketId, eliminando o erro "key" de uma vez por todas. */}
-                            {players.filter(p => p && p.socketId).map(player => (
+                            {players.filter(p => p && p._id).map(player => (
                                 <motion.div
-                                    key={player.socketId}
+                                    key={player._id} // <-- CHAVE DEFINITIVA E ESTÁVEL
                                     layout
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.5, opacity: 0 }}
-                                    className="p-3 bg-gray-700 rounded-md text-center font-semibold truncate"
+                                    className={`p-3 rounded-md text-center font-semibold truncate transition-all ${
+                                        player.connected ? 'bg-gray-700' : 'bg-red-900/50 text-stone-400 opacity-60'
+                                    }`}
+                                    title={!player.connected ? `${player.nickname} (desconectado)` : player.nickname}
                                 >
                                     {player.nickname}
                                 </motion.div>
@@ -128,7 +134,7 @@ const QuizLobby = ({ socket }) => {
                     </div>
                     <button
                         onClick={handleStartGame}
-                        disabled={players.length === 0}
+                        disabled={connectedPlayerCount === 0}
                         className="w-full mt-6 flex items-center justify-center gap-3 p-4 bg-green-600 text-white font-bold text-lg rounded-lg hover:bg-green-500 transition-all duration-300 disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                         <Play /> Iniciar Jogo

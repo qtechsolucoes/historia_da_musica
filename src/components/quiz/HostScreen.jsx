@@ -1,23 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, Clock, Users, ChevronRight, BarChart3, Check } from 'lucide-react';
+import { Award, Clock, Users, ChevronRight, Check } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
 const HostScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
 
-    // Adicionado 'countdown' ao estado do jogo
-    const [gameState, setGameState] = useState('loading'); // loading, countdown, question, result, finished
+    const [gameState, setGameState] = useState('loading');
     const [game, setGame] = useState(null);
     const [questionData, setQuestionData] = useState(null);
     const [answerCount, setAnswerCount] = useState(0);
     const [time, setTime] = useState(0);
     const [roundResult, setRoundResult] = useState(null);
     const [finalRanking, setFinalRanking] = useState([]);
-    
-    // Novo estado para controlar a contagem regressiva
     const [countdown, setCountdown] = useState(3);
 
     useEffect(() => {
@@ -29,8 +26,8 @@ const HostScreen = ({ socket }) => {
             setTime(q.time);
             setAnswerCount(0);
             setRoundResult(null);
-            setCountdown(3); // Reinicia a contagem
-            setGameState('countdown'); // Inicia pela contagem regressiva
+            setCountdown(3);
+            setGameState('countdown');
         };
         const handleAnswerUpdate = ({ count }) => setAnswerCount(count);
         const handleRoundResult = (result) => {
@@ -43,7 +40,7 @@ const HostScreen = ({ socket }) => {
         };
         const handleGameCanceled = () => {
              alert('O jogo foi cancelado.');
-             navigate('/kahoot/create');
+             navigate('/quiz/create');
         };
 
         socket.on('kahoot:game_data', handleGameData);
@@ -54,30 +51,27 @@ const HostScreen = ({ socket }) => {
         socket.on('kahoot:game_canceled', handleGameCanceled);
 
         return () => {
-            socket.off('kahoot:game_data');
-            socket.off('kahoot:new_question');
-            socket.off('kahoot:answer_update');
-            socket.off('kahoot:round_result');
-            socket.off('kahoot:game_over');
-            socket.off('kahoot:game_canceled');
+            socket.off('kahoot:game_data', handleGameData);
+            socket.off('kahoot:new_question', handleNewQuestion);
+            socket.off('kahoot:answer_update', handleAnswerUpdate);
+            socket.off('kahoot:round_result', handleRoundResult);
+            socket.off('kahoot:game_over', handleGameOver);
+            socket.off('kahoot:game_canceled', handleGameCanceled);
         };
-
     }, [accessCode, socket, navigate]);
 
-     useEffect(() => {
+    useEffect(() => {
         if (gameState === 'question' && time > 0) {
             const timer = setTimeout(() => setTime(t => t - 1), 1000);
             return () => clearTimeout(timer);
         }
     }, [gameState, time]);
 
-    // Novo useEffect para a contagem regressiva
     useEffect(() => {
         if (gameState === 'countdown' && countdown > 0) {
             const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
             return () => clearTimeout(timer);
         } else if (gameState === 'countdown' && countdown === 0) {
-            // Quando a contagem termina, mostra a pergunta
             setGameState('question');
         }
     }, [gameState, countdown]);
@@ -95,6 +89,8 @@ const HostScreen = ({ socket }) => {
     const shapeColors = ['bg-red-600', 'bg-blue-600', 'bg-yellow-500', 'bg-green-600'];
 
     if (!game) return <div className="min-h-screen bg-gray-900 flex items-center justify-center"><LoadingSpinner /></div>;
+    
+    const connectedPlayerCount = game.players.filter(p => p.connected).length;
 
     const renderContent = () => {
         switch (gameState) {
@@ -146,9 +142,9 @@ const HostScreen = ({ socket }) => {
                 );
             case 'result':
                 const rankingColors = [
-                    'bg-yellow-400/20 border-yellow-400', // 1st
-                    'bg-gray-400/20 border-gray-400',   // 2nd
-                    'bg-orange-600/20 border-orange-600' // 3rd
+                    'bg-yellow-400/20 border-yellow-400',
+                    'bg-gray-400/20 border-gray-400',
+                    'bg-orange-600/20 border-orange-600'
                 ];
                 return (
                     <div className="w-full h-full flex flex-col p-8 items-center justify-center">
@@ -156,7 +152,7 @@ const HostScreen = ({ socket }) => {
                         <div className="w-full max-w-2xl space-y-3">
                              {roundResult.ranking.slice(0, 5).map((player, index) => (
                                 <motion.div
-                                    key={player.socketId}
+                                    key={player._id}
                                     initial={{ opacity: 0, x: -50 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
@@ -184,7 +180,7 @@ const HostScreen = ({ socket }) => {
                          <div className="w-full max-w-3xl space-y-4">
                              {finalRanking.map((player, index) => (
                                 <motion.div
-                                    key={player.socketId}
+                                    key={player._id}
                                     initial={{ opacity: 0, scale: 0.8 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: 0.5 + index * 0.2 }}
@@ -202,7 +198,7 @@ const HostScreen = ({ socket }) => {
                                 </motion.div>
                              ))}
                          </div>
-                         <button onClick={() => navigate('/kahoot/create')} className="mt-12 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500">
+                         <button onClick={() => navigate('/quiz/create')} className="mt-12 px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500">
                              Jogar Novamente
                          </button>
                     </div>
@@ -217,10 +213,10 @@ const HostScreen = ({ socket }) => {
             <header className="flex-shrink-0 flex justify-between items-center bg-black/40 p-4">
                 <div className="flex items-center gap-4">
                     <h1 className="text-2xl font-bold">{game.title}</h1>
-                    <span className="px-3 py-1 bg-gray-700 text-sm rounded-full">{questionData ? `Questão ${questionData.index + 1} de ${game.quiz.questionCount}` : `Lobby`}</span>
+                    <span className="px-3 py-1 bg-gray-700 text-sm rounded-full">{questionData ? `Questão ${questionData.index + 1} de ${questionData.totalQuestions}` : `Lobby`}</span>
                 </div>
                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-xl"><Users /> {game.players.length}</div>
+                    <div className="flex items-center gap-2 text-xl"><Users /> {connectedPlayerCount}</div>
                     <div className="flex items-center gap-2 text-xl"><Check /> {answerCount}</div>
                     <div className="flex items-center gap-2 text-xl font-mono bg-black/50 px-3 py-1 rounded"><Clock /> {time}</div>
                 </div>

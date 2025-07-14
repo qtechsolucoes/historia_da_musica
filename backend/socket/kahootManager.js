@@ -1,11 +1,8 @@
 const Game = require('../models/Game');
 
-// Objeto em memória para estados de jogo que não precisam ser persistidos no DB constantemente.
 const activeGames = {};
 
 function calculateScore(timeRemaining) {
-    // Pontuação decrescente baseada no tempo, valorizando respostas rápidas.
-    // Garante que mesmo a resposta mais lenta (mas correta) ainda receba pontos.
     return Math.max(0, Math.floor(1000 * (timeRemaining / 15)));
 }
 
@@ -15,8 +12,19 @@ async function startNextQuestion(io, accessCode) {
 
     if (!game || !gameSession || game.status !== 'in_progress') return;
 
-    gameSession.playerAnswers.clear();
+    const connectedPlayers = game.players.filter(p => p.connected);
+    if (connectedPlayers.length === 0) {
+        game.status = 'finished';
+        await game.save();
+        io.to(accessCode).emit('kahoot:game_over', { players: game.players.sort((a, b) => b.score - a.score) });
+        if(activeGames[accessCode]) {
+            clearTimeout(activeGames[accessCode].questionTimer);
+            delete activeGames[accessCode];
+        }
+        return;
+    }
 
+    gameSession.playerAnswers.clear();
     const nextIndex = game.currentQuestionIndex + 1;
 
     if (nextIndex >= game.quiz.questions.length) {
@@ -35,7 +43,6 @@ async function startNextQuestion(io, accessCode) {
 
     const question = game.quiz.questions[nextIndex];
     if (!question) {
-        // CUIDADO: Fator de robustez. Se uma questão for nula por algum motivo, encerra o jogo para evitar crash.
         io.to(accessCode).emit('kahoot:game_canceled', { message: 'Erro crítico: Pergunta não encontrada. O jogo foi encerrado.' });
         await Game.deleteOne({ accessCode });
         return;
@@ -75,7 +82,7 @@ async function startNextQuestion(io, accessCode) {
             ranking: currentGame.players.sort((a, b) => b.score - a.score)
         });
 
-    }, (questionData.time * 1000) + 500); // Adiciona 500ms de margem
+    }, (questionData.time * 1000) + 500);
 }
 
 function initializeKahootManager(io) {
@@ -93,9 +100,7 @@ function initializeKahootManager(io) {
                 }
                 
                 socket.emit('kahoot:game_data', game);
-                const validPlayers = game.players.filter(p => p && p.socketId);
-                io.to(socket.id).emit('kahoot:player_list_update', validPlayers);
-
+                io.to(socket.id).emit('kahoot:player_list_update', game.players);
             } else {
                 socket.emit('kahoot:error', { message: 'Jogo não encontrado.' });
             }
@@ -105,24 +110,22 @@ function initializeKahootManager(io) {
             if (!accessCode || !nickname || typeof nickname !== 'string' || nickname.length < 2 || nickname.length > 20) {
                 return callback({ error: 'Apelido inválido.' });
             }
-            
             const game = await Game.findOne({ accessCode });
-            
             if (!game) return callback({ error: 'Jogo não encontrado.' });
             if (game.status !== 'lobby') return callback({ error: 'Este jogo já começou.' });
-            if (game.players.some(p => p.nickname === nickname)) {
+            if (game.players.some(p => p.nickname === nickname && p.connected)) {
                 return callback({ error: 'Este apelido já está em uso.' });
             }
 
             socket.join(accessCode);
-            const newPlayer = { socketId: socket.id, nickname, score: 0 };
+            const newPlayer = { socketId: socket.id, nickname, score: 0, connected: true };
             game.players.push(newPlayer);
             await game.save();
             
-            const validPlayers = game.players.filter(p => p && p.socketId);
-            io.to(accessCode).emit('kahoot:player_list_update', validPlayers);
+            const playerFromDb = game.players[game.players.length - 1];
             
-            callback({ player: newPlayer, game });
+            io.to(accessCode).emit('kahoot:player_list_update', game.players);
+            callback({ player: playerFromDb, game });
         });
         
         socket.on('kahoot:player_rejoin', async ({ accessCode, nickname }, callback) => {
@@ -131,22 +134,17 @@ function initializeKahootManager(io) {
 
             if (game && player) {
                 socket.join(accessCode);
-                player.socketId = socket.id; // Atualiza para o novo socket ID
+                player.socketId = socket.id;
+                player.connected = true;
                 await game.save();
 
-                const validPlayers = game.players.filter(p => p && p.socketId);
-                io.to(game.hostSocketId).emit('kahoot:player_list_update', validPlayers);
+                io.to(game.hostSocketId).emit('kahoot:player_list_update', game.players);
                 
-                const currentQuestion = (game.status === 'in_progress' && game.quiz.questions.length > game.currentQuestionIndex) 
+                const currentQuestion = (game.status === 'in_progress' && game.currentQuestionIndex > -1) 
                     ? game.quiz.questions[game.currentQuestionIndex] 
                     : null;
 
-                callback({ 
-                    player, 
-                    game, 
-                    gameState: game.status,
-                    currentQuestion
-                });
+                callback({ player, game, gameState: game.status, currentQuestion });
             } else {
                 callback({ error: 'Não foi possível reconectar ao jogo.' });
             }
@@ -175,9 +173,13 @@ function initializeKahootManager(io) {
             const gameSession = activeGames[accessCode];
             if (gameSession && typeof answerIndex === 'number' && !gameSession.playerAnswers.has(socket.id)) {
                 gameSession.playerAnswers.set(socket.id, { answerIndex, timeRemaining });
-                Game.findOne({ accessCode }).select('hostSocketId').lean().then(game => {
+                Game.findOne({ accessCode }).select('hostSocketId players').lean().then(game => {
                     if (game && game.hostSocketId) {
-                        io.to(game.hostSocketId).emit('kahoot:answer_update', { count: gameSession.playerAnswers.size });
+                        const connectedPlayerCount = game.players.filter(p => p.connected).length;
+                        io.to(game.hostSocketId).emit('kahoot:answer_update', { 
+                            count: gameSession.playerAnswers.size,
+                            total: connectedPlayerCount 
+                        });
                     }
                 });
             }
@@ -199,14 +201,11 @@ function initializeKahootManager(io) {
             const game = await Game.findOne({ "players.socketId": socket.id });
 
             if (game) {
-                 const playerIndex = game.players.findIndex(p => p.socketId === socket.id);
-                 if (playerIndex !== -1) {
-                    if (game.status === 'lobby') {
-                        game.players.splice(playerIndex, 1);
-                        await game.save();
-                        const validPlayers = game.players.filter(p => p && p.socketId);
-                        io.to(game.accessCode).emit('kahoot:player_list_update', validPlayers);
-                    }
+                 const player = game.players.find(p => p.socketId === socket.id);
+                 if (player) {
+                    player.connected = false;
+                    await game.save();
+                    io.to(game.accessCode).emit('kahoot:player_list_update', game.players);
                  }
             }
             

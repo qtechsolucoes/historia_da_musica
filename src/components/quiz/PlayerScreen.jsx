@@ -4,14 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Award, CheckCircle, XCircle, Clock, WifiOff } from 'lucide-react';
 import LoadingSpinner from '../LoadingSpinner';
 
-// --- ARQUITETURA ROBUSTA: Componentes de View ---
-// Cada estado visual do jogo é um componente separado e puro.
-// Eles apenas recebem dados (props) e os renderizam.
+// --- Componentes de View Puros ---
+// Estes componentes apenas renderizam UI com base nas props recebidas.
 
 const ConnectingView = () => (
     <div className="text-center">
         <LoadingSpinner />
-        <p className="mt-2 text-stone-300 animate-pulse">A reconectar ao jogo...</p>
+        <p className="mt-2 text-stone-300 animate-pulse">Conectando ao jogo...</p>
     </div>
 );
 
@@ -97,7 +96,7 @@ const ErrorView = ({ message }) => (
     </div>
 );
 
-// --- COMPONENTE RENDERIZADOR ---
+// --- Componente Renderizador de Estados ---
 const GameStateRenderer = ({ gameState, ...props }) => {
     switch (gameState) {
         case 'lobby': return <LobbyView />;
@@ -105,20 +104,19 @@ const GameStateRenderer = ({ gameState, ...props }) => {
         case 'result': return <ResultView {...props} />;
         case 'finished': return <FinishedView {...props} />;
         case 'error': return <ErrorView {...props} />;
-        case 'connecting':
+        case 'initializing':
+        case 'joining':
         default: return <ConnectingView />;
     }
 };
 
-
-// --- COMPONENTE PRINCIPAL ---
+// --- COMPONENTE PRINCIPAL (LÓGICA DE MÁQUINA DE ESTADOS FINAL) ---
 const PlayerScreen = ({ socket }) => {
     const { accessCode } = useParams();
     const navigate = useNavigate();
     
-    // CUIDADO: Estado unificado para garantir atualizações atômicas e evitar condições de corrida na renderização.
     const [gameData, setGameData] = useState({
-        gameState: 'connecting',
+        gameState: 'initializing', // Estado inicial neutro, esperando o socket conectar
         player: null,
         game: null,
         question: null,
@@ -131,9 +129,40 @@ const PlayerScreen = ({ socket }) => {
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const previousScoreRef = useRef(0);
 
+    // Efeito principal que gerencia TODO o ciclo de vida da conexão e do jogo
     useEffect(() => {
-        // CUIDADO: Todos os listeners são configurados uma vez e usam o 'setGameData' para atualizar o estado.
-        // Isso previne recriações de listeners e comportamentos inesperados.
+        // Função para entrar no jogo, chamada apenas quando o socket está conectado.
+        const joinGame = () => {
+            const savedPlayerData = sessionStorage.getItem('kahootPlayer');
+            if (!savedPlayerData) {
+                setGameData(prev => ({ ...prev, gameState: 'error', error: 'Sessão de jogador não encontrada. Por favor, entre novamente.' }));
+                return;
+            }
+            
+            const { nickname } = JSON.parse(savedPlayerData);
+            setGameData(prev => ({ ...prev, gameState: 'joining' })); // Muda para o estado 'joining'
+
+            socket.emit('kahoot:player_rejoin', { accessCode, nickname }, (response) => {
+                if (response.error) {
+                    setGameData(prev => ({ ...prev, gameState: 'error', error: response.error }));
+                    sessionStorage.removeItem('kahootPlayer');
+                } else {
+                    // SUCESSO! Define o estado inicial do jogo com os dados do servidor.
+                    previousScoreRef.current = response.player.score;
+                    setGameData({
+                        player: response.player,
+                        game: response.game,
+                        gameState: response.game.status || 'lobby',
+                        question: response.currentQuestion,
+                        roundResult: null,
+                        finalRanking: [],
+                        error: '',
+                    });
+                }
+            });
+        };
+
+        // Listeners de eventos do jogo
         const handleNewQuestion = (q) => {
             setSelectedAnswer(null);
             setTime(q.time || 15);
@@ -142,74 +171,46 @@ const PlayerScreen = ({ socket }) => {
                 return { ...prev, gameState: 'question', question: q, roundResult: null };
             });
         };
-
         const handleRoundResult = (result) => {
-            setGameData(prev => ({ ...prev, gameState: 'result', roundResult: result }));
+            setGameData(prev => {
+                const myResult = result.ranking.find(p => p.nickname === prev.player?.nickname);
+                const updatedPlayer = myResult ? { ...prev.player, score: myResult.score } : prev.player;
+                return { ...prev, gameState: 'result', roundResult: result, player: updatedPlayer };
+            });
         };
-
         const handleGameOver = (data) => {
             setGameData(prev => ({ ...prev, gameState: 'finished', finalRanking: data.players }));
             sessionStorage.removeItem('kahootPlayer');
         };
-        
         const handleGameCanceled = ({ message }) => {
-            alert(message || 'O jogo foi encerrado.');
+            alert(message || 'O jogo foi cancelado.');
             sessionStorage.removeItem('kahootPlayer');
-            navigate('/quiz/create'); // Redireciona para um local seguro
-        };
-        
-        const handleReconnect = () => {
-            const savedPlayerData = sessionStorage.getItem('kahootPlayer');
-            if (!savedPlayerData) {
-                setGameData(prev => ({ ...prev, gameState: 'error', error: 'Sessão não encontrada. Por favor, entre no jogo novamente.' }));
-                return;
-            }
-
-            const { nickname } = JSON.parse(savedPlayerData);
-            socket.emit('kahoot:player_rejoin', { accessCode, nickname }, (response) => {
-                if (response.error) {
-                    setGameData(prev => ({ ...prev, gameState: 'error', error: response.error }));
-                    sessionStorage.removeItem('kahootPlayer');
-                } else {
-                    const newGameState = response.game.status === 'in_progress' ? 'question' : response.game.status;
-                    setGameData({
-                        ...gameData,
-                        player: response.player,
-                        game: response.game,
-                        gameState: newGameState,
-                        question: response.currentQuestion
-                    });
-                    previousScoreRef.current = response.player.score;
-                }
-            });
+            navigate('/quiz/create');
         };
 
-        socket.on('connect', handleReconnect); // Tenta reconectar se a conexão for restabelecida
+        // Configura os listeners
         socket.on('kahoot:new_question', handleNewQuestion);
         socket.on('kahoot:round_result', handleRoundResult);
         socket.on('kahoot:game_over', handleGameOver);
         socket.on('kahoot:game_canceled', handleGameCanceled);
-        
-        handleReconnect(); // Tenta a primeira conexão/reconexão
+        socket.on('connect', joinGame); // Chama joinGame QUANDO o socket se (re)conecta
 
+        // Se o socket já estiver conectado na montagem, chama joinGame imediatamente.
+        if (socket.connected) {
+            joinGame();
+        }
+
+        // Função de limpeza para remover todos os listeners
         return () => {
-            socket.off('connect', handleReconnect);
             socket.off('kahoot:new_question', handleNewQuestion);
             socket.off('kahoot:round_result', handleRoundResult);
             socket.off('kahoot:game_over', handleGameOver);
             socket.off('kahoot:game_canceled', handleGameCanceled);
+            socket.off('connect', joinGame);
         };
-    }, [accessCode, navigate, socket]);
+    }, [socket, accessCode, navigate]);
     
-    useEffect(() => {
-        if (gameData.gameState === 'result' && gameData.roundResult) {
-            const myResult = gameData.roundResult.ranking.find(p => p.nickname === gameData.player?.nickname);
-            if (myResult) {
-                setGameData(prev => ({ ...prev, player: { ...prev.player, score: myResult.score } }));
-            }
-        }
-    }, [gameData.gameState, gameData.roundResult, gameData.player?.nickname]);
-
+    // Timer da pergunta
     useEffect(() => {
         let timer;
         if (gameData.gameState === 'question' && time > 0) {
@@ -225,22 +226,22 @@ const PlayerScreen = ({ socket }) => {
         }
     };
     
+    const score = gameData.roundResult?.ranking.find(p => p.nickname === gameData.player?.nickname)?.score ?? gameData.player?.score ?? 0;
+    
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col p-4">
              <header className="flex-shrink-0 flex justify-between items-center bg-black/30 p-4 rounded-t-lg">
                 <h2 className="text-xl font-bold text-white truncate">{gameData.player?.nickname || 'Aguardando...'}</h2>
-                <div className="text-xl font-bold text-amber-300">{gameData.player?.score || 0} pts</div>
+                <div className="text-xl font-bold text-amber-300">{score} pts</div>
             </header>
             <main className="flex-grow flex items-center justify-center bg-black/20 p-4 rounded-b-lg relative">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        // CUIDADO: A chave da animação é o gameState. Isso força a Framer Motion
-                        // a ver a mudança como uma troca de componente, animando corretamente.
                         key={gameData.gameState}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20, position: 'absolute' }}
-                        transition={{ duration: 0.3 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, position: 'absolute' }}
+                        transition={{ duration: 0.2 }}
                         className="w-full h-full flex items-center justify-center"
                     >
                         <GameStateRenderer 

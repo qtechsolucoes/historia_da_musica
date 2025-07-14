@@ -1,25 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Gamepad2, ChevronRight, ArrowLeft } from 'lucide-react'; // Adicionado ArrowLeft
-import LoadingSpinner from '../LoadingSpinner';
+import { Gamepad2, ChevronRight, ArrowLeft, Loader } from 'lucide-react';
 
-const JoinQuiz = ({ socket }) => { // Nome do componente padronizado
+const JoinQuiz = ({ socket }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     const urlParams = new URLSearchParams(location.search);
     const initialCode = urlParams.get('code') || '';
 
+    // Estados para controlar o formulário e o lobby
     const [accessCode, setAccessCode] = useState(initialCode);
     const [nickname, setNickname] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [gameJoined, setGameJoined] = useState(false); // Novo estado para controlar a UI
 
+    // Listener para o início do jogo
     useEffect(() => {
-        socket.off('kahoot:game_data');
-        socket.off('error');
-    }, [socket]);
+        const handleGameStarted = () => {
+            // A navegação só ocorre AGORA, quando o host inicia o jogo.
+            navigate(`/quiz/play/${accessCode}`);
+        };
+        const handleGameCanceled = () => {
+            alert("O anfitrião cancelou o jogo.");
+            setGameJoined(false); // Volta para a tela de join
+        };
+
+        socket.on('kahoot:game_started', handleGameStarted);
+        socket.on('kahoot:game_canceled', handleGameCanceled);
+
+        return () => {
+            socket.off('kahoot:game_started', handleGameStarted);
+            socket.off('kahoot:game_canceled', handleGameCanceled);
+        };
+    }, [socket, navigate, accessCode]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -35,21 +51,30 @@ const JoinQuiz = ({ socket }) => { // Nome do componente padronizado
             if (response.error) {
                 setError(response.error);
             } else {
-                // --- NOVA LÓGICA DE PERSISTÊNCIA ---
-                // CUIDADO: sessionStorage é usado para guardar os dados do jogador no navegador.
-                // Isto é crucial para a reconexão. Se esta linha for removida, a reconexão falhará.
-                // Usamos JSON.stringify para armazenar o objeto como uma string.
                 sessionStorage.setItem('kahootPlayer', JSON.stringify({ nickname: response.player.nickname, accessCode }));
-                
-                navigate(`/quiz/play/${accessCode}`, { state: { player: response.player, game: response.game } });
+                setGameJoined(true); // TRANSFORMA o componente na tela de lobby
             }
         });
     };
 
+    // Renderização do Lobby de Espera
+    if (gameJoined) {
+        return (
+            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+                    <h2 className="text-3xl text-amber-200">Você está no jogo, {nickname}!</h2>
+                    <p className="text-stone-300 mt-2">Aguarde o anfitrião iniciar a partida.</p>
+                    <div className="flex justify-center items-center mt-8">
+                        <Loader className="animate-spin text-amber-400" size={48} />
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
+
+    // Renderização do Formulário de Entrada (Padrão)
     return (
-        <div className="min-h-screen bg-gray-800 text-white flex items-center justify-center p-4" style={{
-            backgroundImage: `radial-gradient(circle at center, rgba(38, 70, 83, 0.2), transparent 60%)`
-        }}>
+        <div className="min-h-screen bg-gray-800 text-white flex items-center justify-center p-4">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -102,7 +127,7 @@ const JoinQuiz = ({ socket }) => { // Nome do componente padronizado
                         disabled={isLoading}
                         className="w-full flex items-center justify-center gap-2 mt-8 p-4 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-500 transition-all duration-300 disabled:bg-gray-500 disabled:cursor-wait"
                     >
-                        {isLoading ? <LoadingSpinner /> : <>Entrar <ChevronRight /></>}
+                        {isLoading ? <Loader className="animate-spin" /> : <>Entrar <ChevronRight /></>}
                     </button>
                 </form>
             </motion.div>
@@ -110,4 +135,4 @@ const JoinQuiz = ({ socket }) => { // Nome do componente padronizado
     );
 };
 
-export default JoinQuiz; // Nome do componente padronizado
+export default JoinQuiz;
