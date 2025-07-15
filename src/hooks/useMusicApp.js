@@ -10,10 +10,43 @@ const ALL_ACHIEVEMENTS = {
     POLIGLOTA_MUSICAL: { name: "Poliglota Musical", description: "Complete desafios em 3 períodos diferentes." }
 };
 
+// --- FUNÇÃO CORRIGIDA ---
+// Esta nova versão agora consegue interpretar algarismos romanos para os séculos.
+const romanToDecimal = (roman) => {
+    const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+    let result = 0;
+    for (let i = 0; i < roman.length; i++) {
+        const current = map[roman[i].toUpperCase()];
+        const next = map[roman[i + 1]?.toUpperCase()];
+        if (next && current < next) {
+            result -= current;
+        } else {
+            result += current;
+        }
+    }
+    return result;
+};
+
 const getBirthYear = (lifespan) => {
     if (!lifespan) return Infinity;
-    const match = lifespan.match(/\d{4}/);
-    return match ? parseInt(match[0], 10) : Infinity;
+
+    // 1. Tenta encontrar um ano com 3 ou 4 dígitos primeiro
+    let match = lifespan.match(/\d{3,4}/);
+    if (match) {
+        return parseInt(match[0], 10);
+    }
+
+    // 2. Se não encontrar, procura pelo padrão "séc. [ALGARISMO ROMANO]"
+    match = lifespan.match(/séc\.\s*([IVXLCDM]+)/i);
+    if (match && match[1]) {
+        const century = romanToDecimal(match[1]);
+        // Retorna o ano de início do século para a ordenação (ex: séc. XII -> 1101)
+        if (century > 0) {
+            return (century - 1) * 100 + 1;
+        }
+    }
+
+    return Infinity; // Fallback se nenhum ano válido for encontrado
 };
 
 
@@ -355,7 +388,7 @@ Responda em português do Brasil.`;
         setTimeline({ items: shuffledItems, correctOrder, feedback: '', isLoading: false, isChecked: false });
     };
     
-    const handleCheckTimeline = (userOrder, setTimelineItems) => {
+    const handleCheckTimeline = (userOrder) => {
         const isOrderCorrect = userOrder.every((item, index) => item.name === timeline.correctOrder[index]);
     
         if (isOrderCorrect) {
@@ -363,9 +396,7 @@ Responda em português do Brasil.`;
             setTimeline(prev => ({ ...prev, feedback: 'Perfeito! A ordem está correta.', isChecked: true }));
         } else {
             handleIncorrectAnswer();
-            const correctItems = [...timeline.items].sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan));
-            setTimelineItems(correctItems);
-            setTimeline(prev => ({ ...prev, feedback: 'Quase lá! A ordem correta foi revelada.', isChecked: true }));
+            setTimeline(prev => ({ ...prev, feedback: 'Quase lá! Itens na posição correta estão em verde.', isChecked: true }));
         }
     };
 

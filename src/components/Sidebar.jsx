@@ -1,41 +1,41 @@
-import React, { useState } from 'react';
-import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus, BookOpen, Guitar, Music4, Crown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus, BookOpen, Guitar, Music4, Crown, X } from 'lucide-react';
 
-// --- COMPONENTE AUXILIAR PARA NÍVEIS CORRIGIDO ---
 const getPlayerLevel = (score) => {
     if (score >= 10000) return { name: 'Kapellmeister', icon: <Crown size={20} className="text-yellow-400" />, color: 'text-yellow-400' };
     if (score >= 5000) return { name: 'Maestro', icon: <Award size={20} className="text-purple-400" />, color: 'text-purple-400' };
-    if (score >= 1500) return { name: 'Virtuoso', icon: <Music4 size={20} className="text-blue-400" />, color: 'text-blue-400' }; // ÍCONE CORRIGIDO
+    if (score >= 1500) return { name: 'Virtuoso', icon: <Music4 size={20} className="text-blue-400" />, color: 'text-blue-400' };
     if (score >= 500) return { name: 'Trovador', icon: <Guitar size={20} className="text-green-400" />, color: 'text-green-400' };
     return { name: 'Aprendiz', icon: <BookOpen size={20} className="text-gray-400" />, color: 'text-gray-400' };
 };
 
-
 const Sidebar = ({ 
-    periods, selectedPeriod, onSelectPeriod, hasInteracted, 
+    periods, selectedPeriod, onSelectPeriod, 
     user, score, achievements, stats,
-    onCustomLogin, onLogout
+    onCustomLogin, onLogout,
+    isOpen, onClose, hasInteracted // A prop hasInteracted é recebida aqui
 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = React.useRef(null);
     const [volume, setVolume] = useState(0.5);
     const [showProfileDetails, setShowProfileDetails] = useState(false);
+    // O estado local 'hasInteracted' foi removido daqui.
 
     const playerLevel = user ? getPlayerLevel(score) : null;
 
-    React.useEffect(() => {
-        if (!audioRef.current || !selectedPeriod || !hasInteracted) return;
-        if (selectedPeriod.referenceSong) {
+    useEffect(() => {
+        if (!hasInteracted) return; // Depende da prop agora
+
+        if (audioRef.current && selectedPeriod?.referenceSong) {
             const isNewSong = !audioRef.current.src.endsWith(selectedPeriod.referenceSong);
-            if (isNewSong) audioRef.current.src = selectedPeriod.referenceSong;
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(() => setIsPlaying(false));
+            if (isNewSong) {
+                audioRef.current.src = selectedPeriod.referenceSong;
             }
+            audioRef.current.play().catch(() => setIsPlaying(false));
         }
     }, [selectedPeriod, hasInteracted]);
     
-    React.useEffect(() => {
+    useEffect(() => {
         if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
 
@@ -61,8 +61,14 @@ const Sidebar = ({
     }
 
     return (
-        <aside className="w-64 bg-black/30 backdrop-blur-md border-r-2 border-amber-900/50 flex flex-col flex-shrink-0">
-            <header className="text-center p-4 border-b-2 border-amber-900/50">
+        <aside 
+            className={`w-64 bg-black/50 backdrop-blur-md flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 fixed inset-y-0 left-0 z-40 border-r-2 border-amber-900/50 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+            onClick={(e) => e.stopPropagation()} // Evita que o clique feche o menu se clicar na própria sidebar
+        >
+            <header className="relative text-center p-4 border-b-2 border-amber-900/50">
+                 <button onClick={onClose} className="md:hidden absolute top-2 right-2 p-2 text-stone-300 hover:text-white">
+                    <X size={24} />
+                </button>
                 <h1 className="text-2xl lg:text-3xl font-title gold-text-effect" style={{textShadow: '2px 2px 8px rgba(0,0,0,0.7)'}}>
                     Codex Historiæ Musicæ
                 </h1>
@@ -137,7 +143,10 @@ const Sidebar = ({
                     {periods.map(period => (
                         <li key={period.id}>
                             <button 
-                                onClick={() => onSelectPeriod(period.id)}
+                                onClick={() => {
+                                    onSelectPeriod(period.id);
+                                    onClose();
+                                }}
                                 className={`w-full text-left px-4 py-3 rounded-md text-base font-semibold transition-all duration-200 flex items-center gap-3
                                     ${selectedPeriod?.id === period.id 
                                         ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20' 

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import io from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Menu } from 'lucide-react';
 
 import { musicHistoryData } from './data/musicHistoryData';
 import { useMusicApp } from './hooks/useMusicApp';
@@ -24,64 +25,83 @@ const backendUrl = 'http://localhost:5001';
 const socket = io(backendUrl);
 
 const AppLayout = () => {
-    const [hasInteracted, setHasInteracted] = useState(false);
     const musicAppProps = useMusicApp();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [hasInteracted, setHasInteracted] = useState(false); // 1. Estado de interação volta para o AppLayout
 
     return (
+        // 2. O onClick é adicionado ao container principal
         <div 
-            className="h-screen w-screen text-stone-200 font-sans flex overflow-hidden" 
-            id="app-container" 
+            className="h-screen w-screen text-stone-200 font-sans md:flex overflow-hidden" 
+            id="app-container"
             onClick={() => { if (!hasInteracted) setHasInteracted(true); }}
         >
             <Sidebar
                 periods={musicHistoryData}
                 selectedPeriod={musicAppProps.selectedPeriod}
                 onSelectPeriod={musicAppProps.handleSelectPeriod}
-                hasInteracted={hasInteracted}
                 user={musicAppProps.currentUser}
                 score={musicAppProps.score}
                 achievements={musicAppProps.achievements}
                 stats={musicAppProps.stats}
                 onCustomLogin={musicAppProps.handleCustomLogin} 
                 onLogout={musicAppProps.handleLogout}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+                hasInteracted={hasInteracted} // 3. Passa o estado como prop
             />
-            <div className="flex-1 flex flex-col overflow-y-auto scrollbar-custom">
-                {musicAppProps.selectedPeriod && (
-                    <MainContent 
-                        period={musicAppProps.selectedPeriod} 
-                        onCardClick={musicAppProps.handleOpenModal}
-                        activeChallenge={musicAppProps.activeChallenge}
-                        setActiveChallenge={musicAppProps.setActiveChallenge}
-                        quiz={musicAppProps.quiz}
-                        onGenerateQuiz={musicAppProps.onGenerateQuiz}
-                        onQuizGuess={musicAppProps.onQuizGuess}
-                        whoAmI={musicAppProps.whoAmI}
-                        onGenerateWhoAmI={musicAppProps.onGenerateWhoAmI}
-                        onWhoAmIGuess={musicAppProps.onWhoAmIGuess}
-                        timeline={musicAppProps.timeline}
-                        onGenerateTimeline={musicAppProps.onGenerateTimeline}
-                        onCheckTimeline={musicAppProps.onCheckTimeline}
-                        fromWhichPeriod={musicAppProps.fromWhichPeriod}
-                        onGenerateFromWhichPeriod={musicAppProps.onGenerateFromWhichPeriod}
-                        onFromWhichPeriodGuess={musicAppProps.onFromWhichPeriodGuess}
-                        leaderboard={musicAppProps.leaderboard}
-                        user={musicAppProps.currentUser}
-                        socket={socket}
-                        // --- PROPS DO MODO SOBREVIVÊNCIA ---
-                        survival={musicAppProps.survival}
-                        handleStartSurvival={musicAppProps.handleStartSurvival}
-                        generateSurvivalQuestion={musicAppProps.generateSurvivalQuestion}
-                        handleSurvivalAnswer={musicAppProps.handleSurvivalAnswer}
-                    />
-                )}
+
+            {isSidebarOpen && <div onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }} className="md:hidden fixed inset-0 bg-black/60 z-30" />}
+
+            <div className="flex-1 flex flex-col h-screen overflow-hidden">
+                <header className="md:hidden flex-shrink-0 flex items-center justify-between p-4 bg-black/40 border-b-2 border-amber-900/50">
+                    <button onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(true); }} className="text-stone-200 p-1">
+                        <Menu size={28} />
+                    </button>
+                    <h1 className="text-xl font-title text-amber-300">
+                        Codex Historiæ Musicæ
+                    </h1>
+                    <div className="w-8" />
+                </header>
+
+                <div className="flex-1 flex flex-col overflow-y-auto scrollbar-custom">
+                    {musicAppProps.selectedPeriod && (
+                        <MainContent 
+                            period={musicAppProps.selectedPeriod} 
+                            onCardClick={musicAppProps.handleOpenModal}
+                            activeChallenge={musicAppProps.activeChallenge}
+                            setActiveChallenge={musicAppProps.setActiveChallenge}
+                            quiz={musicAppProps.quiz}
+                            onGenerateQuiz={musicAppProps.handleGenerateQuiz}
+                            onQuizGuess={musicAppProps.handleQuizGuess}
+                            whoAmI={musicAppProps.whoAmI}
+                            onGenerateWhoAmI={musicAppProps.handleGenerateWhoAmI}
+                            onWhoAmIGuess={musicAppProps.handleWhoAmIGuess}
+                            timeline={musicAppProps.timeline}
+                            onGenerateTimeline={musicAppProps.handleGenerateTimeline}
+                            onCheckTimeline={musicAppProps.handleCheckTimeline}
+                            fromWhichPeriod={musicAppProps.fromWhichPeriod}
+                            onGenerateFromWhichPeriod={musicAppProps.handleGenerateFromWhichPeriod}
+                            onFromWhichPeriodGuess={musicAppProps.handleFromWhichPeriodGuess}
+                            leaderboard={musicAppProps.leaderboard}
+                            user={musicAppProps.currentUser}
+                            socket={socket}
+                            survival={musicAppProps.survival}
+                            handleStartSurvival={musicAppProps.handleStartSurvival}
+                            generateSurvivalQuestion={musicAppProps.generateSurvivalQuestion}
+                            handleSurvivalAnswer={musicAppProps.handleSurvivalAnswer}
+                        />
+                    )}
+                </div>
             </div>
+
             <DetailModal content={musicAppProps.modalContent} onClose={musicAppProps.handleCloseModal} />
             <AchievementToast 
                 achievement={musicAppProps.lastAchievement} 
                 onDismiss={() => musicAppProps.setLastAchievement(null)} 
             />
-             <audio ref={musicAppProps.correctSoundRef} src="/assets/audio/correct.mp3" preload="auto" />
-             <audio ref={musicAppProps.incorrectSoundRef} src="/assets/audio/incorrect.mp3" preload="auto" />
+             <audio ref={musicAppProps.correctSoundRef} src="assets/audio/correct.mp3" preload="auto" />
+             <audio ref={musicAppProps.incorrectSoundRef} src="assets/audio/incorrect.mp3" preload="auto" />
         </div>
     );
 };

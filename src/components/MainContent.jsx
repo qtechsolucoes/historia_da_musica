@@ -8,61 +8,61 @@ import LoadingSpinner from './LoadingSpinner';
 import BattleMode from './BattleMode'; 
 
 const ChallengeHub = ({ setActiveChallenge }) => (
-    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-5xl mx-auto text-center">
-        <h2 className="text-3xl mb-6 text-amber-300 font-title flex items-center justify-center gap-3"><BrainCircuit/> Hub de Desafios</h2>
+    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-5xl mx-auto text-center">
+        <h2 className="text-2xl md:text-3xl mb-6 text-amber-300 font-title flex items-center justify-center gap-3"><BrainCircuit/> Hub de Desafios</h2>
         
         <div className="mb-6 p-4 border border-dashed border-amber-500 rounded-lg bg-amber-900/20">
-            <h3 className="text-xl font-bold text-amber-200 animate-pulse">🔥 Desafio Diário 🔥</h3>
-            <p className="text-stone-300 mt-1">Jogue no período Barroco para ganhar pontos em dobro!</p>
+            <h3 className="text-lg md:text-xl font-bold text-amber-200 animate-pulse">🔥 Desafio Diário 🔥</h3>
+            <p className="text-stone-300 mt-1 text-sm md:text-base">Jogue no período Barroco para ganhar pontos em dobro!</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link to="/quiz/create" className="p-6 bg-green-800/50 rounded-lg border border-green-700/50 hover:bg-green-600/20 hover:border-green-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
+            <Link to="/quiz/create" className="p-4 md:p-6 bg-green-800/50 rounded-lg border border-green-700/50 hover:bg-green-600/20 hover:border-green-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
                 <PlusSquare size={32} className="mb-2 text-green-400"/>
-                <h3 className="text-xl font-bold text-green-300 font-serif">Criar Quiz Multiplayer</h3>
-                <p className="text-stone-400 mt-2 text-sm">Crie e partilhe o seu próprio quiz interativo!</p>
+                <h3 className="text-lg md:text-xl font-bold text-green-300 font-serif">Criar Quiz Multiplayer</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Crie e partilhe o seu próprio quiz interativo!</p>
             </Link>
 
-            <Link to="/quiz/join" className="p-6 bg-blue-800/50 rounded-lg border border-blue-700/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
+            <Link to="/quiz/join" className="p-4 md:p-6 bg-blue-800/50 rounded-lg border border-blue-700/50 hover:bg-blue-600/20 hover:border-blue-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2">
                 <Hash size={32} className="mb-2 text-blue-400"/>
-                <h3 className="text-xl font-bold text-blue-300 font-serif">Entrar com Código</h3>
-                <p className="text-stone-400 mt-2 text-sm">Participe de um quiz existente.</p>
+                <h3 className="text-lg md:text-xl font-bold text-blue-300 font-serif">Entrar com Código</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Participe de um quiz existente.</p>
             </Link>
             
-            <button onClick={() => setActiveChallenge('quiz')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+            <button onClick={() => setActiveChallenge('quiz')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <ListChecks size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">Múltipla Escolha</h3>
-                <p className="text-stone-400 mt-2 text-sm">Responda perguntas sobre compositores e suas obras.</p>
+                <h3 className="text-lg md:text-xl font-bold text-amber-300 font-serif">Múltipla Escolha</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Responda perguntas sobre compositores e suas obras.</p>
             </button>
-            <button onClick={() => setActiveChallenge('whoami')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+            <button onClick={() => setActiveChallenge('whoami')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <HelpCircle size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">Quem Sou Eu?</h3>
-                <p className="text-stone-400 mt-2 text-sm">Adivinhe o compositor a partir de uma descrição.</p>
+                <h3 className="text-lg md:text-xl font-bold text-amber-300 font-serif">Quem Sou Eu?</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Adivinhe o compositor a partir de uma descrição.</p>
             </button>
-            <button onClick={() => setActiveChallenge('timeline')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+            <button onClick={() => setActiveChallenge('timeline')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <Clock size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">Linha do Tempo</h3>
-                <p className="text-stone-400 mt-2 text-sm">Ordene os compositores cronologicamente.</p>
+                <h3 className="text-lg md:text-xl font-bold text-amber-300 font-serif">Linha do Tempo</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Ordene os compositores cronologicamente.</p>
             </button>
-            <button onClick={() => setActiveChallenge('fromWhichPeriod')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+            <button onClick={() => setActiveChallenge('fromWhichPeriod')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <BrainCircuit size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">De Que Período?</h3>
-                <p className="text-stone-400 mt-2 text-sm">Identifique o período musical pela descrição.</p>
+                <h3 className="text-lg md:text-xl font-bold text-amber-300 font-serif">De Que Período?</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Identifique o período musical pela descrição.</p>
             </button>
-            <button onClick={() => setActiveChallenge('battle')} className="p-6 bg-gray-800/50 rounded-lg border border-purple-800/50 hover:bg-purple-600/20 hover:border-purple-500 transition-all group flex flex-col items-center">
+             <button onClick={() => setActiveChallenge('battle')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-purple-800/50 hover:bg-purple-600/20 hover:border-purple-500 transition-all group flex flex-col items-center">
                 <Swords size={32} className="mb-2 text-purple-400"/>
-                <h3 className="text-xl font-bold text-purple-300 font-serif">Duelo Épico</h3>
-                <p className="text-stone-400 mt-2 text-sm">Desafie outro jogador em tempo real.</p>
+                <h3 className="text-lg md:text-xl font-bold text-purple-300 font-serif">Duelo Épico</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Desafie outro jogador em tempo real.</p>
             </button>
-            <button onClick={() => setActiveChallenge('ranking')} className="p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
+            <button onClick={() => setActiveChallenge('ranking')} className="p-4 md:p-6 bg-gray-800/50 rounded-lg border border-amber-800/50 hover:bg-amber-600/20 hover:border-amber-500 transition-all group flex flex-col items-center">
                 <Crown size={32} className="mb-2 text-amber-400"/>
-                <h3 className="text-xl font-bold text-amber-300 font-serif">Ranking Geral</h3>
-                <p className="text-stone-400 mt-2 text-sm">Veja os maiores mestres da história.</p>
+                <h3 className="text-lg md:text-xl font-bold text-amber-300 font-serif">Ranking Geral</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Veja os maiores mestres da história.</p>
             </button>
-            <button onClick={() => setActiveChallenge('survival')} className="p-6 bg-red-800/50 rounded-lg border border-red-700/50 hover:bg-red-600/20 hover:border-red-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2 lg:col-span-4">
+            <button onClick={() => setActiveChallenge('survival')} className="p-4 md:p-6 bg-red-800/50 rounded-lg border border-red-700/50 hover:bg-red-600/20 hover:border-red-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2 lg:col-span-4">
                 <Shield size={32} className="mb-2 text-red-400"/>
-                <h3 className="text-xl font-bold text-red-300 font-serif">Modo Sobrevivência</h3>
-                <p className="text-stone-400 mt-2 text-sm">Quantas perguntas você consegue acertar antes de perder todas as vidas?</p>
+                <h3 className="text-lg md:text-xl font-bold text-red-300 font-serif">Modo Sobrevivência</h3>
+                <p className="text-stone-400 mt-2 text-xs md:text-sm">Quantas perguntas você consegue acertar antes de perder todas as vidas?</p>
             </button>
         </div>
     </motion.div>
@@ -106,7 +106,7 @@ const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButton
             
             {survival.question && !survival.isLoading && (
                 <motion.div 
-                    key={survival.question.text} // Forçar re-render na troca de pergunta
+                    key={survival.question.text}
                     initial={{opacity: 0, x: 50}} 
                     animate={{opacity: 1, x: 0}}
                     className="p-4 bg-black/30 rounded-md border border-amber-900/50"
@@ -223,7 +223,7 @@ const MainContent = ({
                 </div>
 
                 {sortedItems.length > 0 ? (
-                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
                         <AnimatePresence>
                             {sortedItems.map((item) => (
                                 <InfoCard 
@@ -286,7 +286,7 @@ const MainContent = ({
                 {Object.keys(groupedWorks).length > 0 ? (
                     Object.entries(groupedWorks).map(([category, works]) => (
                         <motion.div key={category} layout>
-                            <h3 className="text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
+                            <h3 className="text-xl md:text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {works.map((work, index) => (
                                     <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
@@ -305,9 +305,8 @@ const MainContent = ({
         const goBackToHub = () => {
              setActiveChallenge(null);
              if (survival.isActive || survival.isGameOver) {
-                // Reseta o jogo de sobrevivência ao sair
                  handleStartSurvival(); 
-                 setActiveChallenge(null); // Garante que a tela de início apareça na próxima vez
+                 setActiveChallenge(null);
              }
         };
 
@@ -318,9 +317,9 @@ const MainContent = ({
         switch (activeChallenge) {
             case 'quiz':
                  return (
-                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <h2 className="text-3xl mb-4 text-amber-300 font-title">Múltipla Escolha</h2>
+                        <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title">Múltipla Escolha</h2>
                         <button onClick={() => onGenerateQuiz()} disabled={quiz.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {quiz.isLoading ? 'Criando...' : 'Gerar Nova Pergunta'}
@@ -351,7 +350,7 @@ const MainContent = ({
                     )
                 }
                 return (
-                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Desistir e Voltar</button>
                         <SurvivalGame
                             survival={survival}
@@ -365,9 +364,9 @@ const MainContent = ({
 
             case 'whoami':
                  return (
-                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <h2 className="text-3xl mb-4 text-amber-300 font-title">Quem Sou Eu?</h2>
+                        <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title">Quem Sou Eu?</h2>
                         <button onClick={() => onGenerateWhoAmI()} disabled={whoAmI.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {whoAmI.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
@@ -397,9 +396,9 @@ const MainContent = ({
                 };
                 
                 return (
-                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <h2 className="text-3xl mb-2 text-amber-300 font-title flex items-center gap-3"><Clock /> Linha do Tempo</h2>
+                        <h2 className="text-2xl md:text-3xl mb-2 text-amber-300 font-title flex items-center gap-3"><Clock /> Linha do Tempo</h2>
                         <p className="text-stone-400 mb-4">Arraste os compositores para ordená-los do mais antigo para o mais recente (por ano de nascimento).</p>
                         
                         <div className="flex flex-col md:flex-row gap-4">
@@ -407,7 +406,7 @@ const MainContent = ({
                                 <Sparkles size={18} />
                                 {timeline.isLoading ? 'Gerando...' : 'Gerar Novo Desafio'}
                             </button>
-                            <button onClick={() => onCheckTimeline(timelineItems, setTimelineItems)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button onClick={() => onCheckTimeline(timelineItems)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                 Verificar Ordem
                             </button>
                         </div>
@@ -433,9 +432,9 @@ const MainContent = ({
             
             case 'fromWhichPeriod':
                 return (
-                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <h2 className="text-3xl mb-4 text-amber-300 font-title">De Que Período?</h2>
+                        <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title">De Que Período?</h2>
                         
                         <p className="text-stone-400 mb-4">Leia a descrição e escolha o período musical correto.</p>
 
@@ -469,9 +468,9 @@ const MainContent = ({
 
             case 'ranking':
                 return (
-                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <h2 className="text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><Crown /> Ranking dos Mestres</h2>
+                        <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title flex items-center gap-3"><Crown /> Ranking dos Mestres</h2>
                         <ul className="space-y-3">
                             {leaderboard.length > 0 ? leaderboard.map((player, index) => (
                                 <li key={player.email} className={`flex items-center justify-between p-3 rounded-md bg-gray-800/60 border ${index === 0 ? 'border-amber-400 shadow-lg shadow-amber-400/20' : 'border-amber-900/50'}`}>
@@ -499,7 +498,7 @@ const MainContent = ({
                     );
                 }
                 return (
-                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
                         <BattleMode user={user} socket={socket} period={period} onBack={goBackToHub} />
                     </motion.div>
@@ -519,16 +518,16 @@ const MainContent = ({
                 const historicalImages = (period.overviewImages || []).slice(0, middleIndex);
                 const musicalImages = (period.overviewImages || []).slice(middleIndex);
                 return (
-                    <div className="bg-black/20 backdrop-blur-sm p-6 md:p-8 rounded-lg border border-amber-900/50 shadow-lg max-w-7xl mx-auto">
+                    <div className="bg-black/20 backdrop-blur-sm p-4 sm:p-6 md:p-8 rounded-lg border border-amber-900/50 shadow-lg max-w-7xl mx-auto">
                         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                            <h2 className="text-4xl text-amber-300 mb-2 font-serif text-shadow-gold text-center">{period.name}</h2>
+                            <h2 className="text-3xl md:text-4xl text-amber-300 mb-2 font-serif text-shadow-gold text-center">{period.name}</h2>
                         </motion.div>
-                        <p className="text-center text-stone-400 mb-8 font-title text-xl">{period.years}</p>
+                        <p className="text-center text-stone-400 mb-8 font-title text-lg md:text-xl">{period.years}</p>
                         
                         <section className="mb-12">
-                            <h3 className="text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Contexto Histórico</h3>
+                            <h3 className="text-2xl md:text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Contexto Histórico</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
-                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-lg text-justify">
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-base md:text-lg text-justify">
                                     {(period.historicalContext || '').split('\n\n').map((paragraph, index) => (<p key={index} className="mb-4 last:mb-0">{paragraph}</p>))}
                                 </div>
                                 <div className="md:col-span-1 space-y-6">
@@ -543,7 +542,7 @@ const MainContent = ({
                         </section>
 
                         <section>
-                            <h3 className="text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Características Musicais</h3>
+                            <h3 className="text-2xl md:text-3xl text-amber-200 font-serif text-shadow-gold mb-4">Características Musicais</h3>
                             <div className="grid md:grid-cols-3 gap-8 items-start">
                                 <div className="md:col-span-1 space-y-6 md:order-2">
                                      {musicalImages.map((image, index) => (
@@ -553,7 +552,7 @@ const MainContent = ({
                                         </figure>
                                     ))}
                                 </div>
-                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-lg text-justify md:order-1">
+                                <div className="md:col-span-2 text-stone-300 leading-relaxed text-base md:text-lg text-justify md:order-1">
                                     {(period.description || '').split('\n\n').map((paragraph, index) => (<p key={index} className="mb-4 last:mb-0">{paragraph}</p>))}
                                 </div>
                             </div>
@@ -573,21 +572,23 @@ const MainContent = ({
 
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-black/20">
-            <div className="flex-shrink-0 border-b-2 border-amber-900/50 p-4">
-                <nav className="-mb-px flex justify-center flex-wrap gap-x-3 gap-y-2 sm:gap-x-4">
-                    {tabs.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`whitespace-nowrap py-2 px-4 rounded-md border-b-2 font-semibold text-sm transition-all duration-200 ${
-                                activeTab === tab.id
-                                    ? 'border-amber-400 bg-amber-400/10 text-amber-300'
-                                    : 'border-transparent text-stone-400 hover:text-amber-300 hover:bg-white/5'
-                            }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+            <div className="flex-shrink-0 border-b-2 border-amber-900/50 p-2 md:p-4 overflow-hidden">
+                <nav className="flex justify-start md:justify-center overflow-x-auto scrollbar-thin">
+                    <div className="flex flex-nowrap gap-x-2 sm:gap-x-4">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex-shrink-0 py-2 px-3 md:px-4 rounded-md border-b-2 font-semibold text-xs sm:text-sm transition-all duration-200 ${
+                                    activeTab === tab.id
+                                        ? 'border-amber-400 bg-amber-400/10 text-amber-300'
+                                        : 'border-transparent text-stone-400 hover:text-amber-300 hover:bg-white/5'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
                 </nav>
             </div>
 
