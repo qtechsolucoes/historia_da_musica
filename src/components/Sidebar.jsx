@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
-import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
+import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus, BookOpen, Guitar, Music4, Crown } from 'lucide-react';
+
+// --- COMPONENTE AUXILIAR PARA NÍVEIS CORRIGIDO ---
+const getPlayerLevel = (score) => {
+    if (score >= 10000) return { name: 'Kapellmeister', icon: <Crown size={20} className="text-yellow-400" />, color: 'text-yellow-400' };
+    if (score >= 5000) return { name: 'Maestro', icon: <Award size={20} className="text-purple-400" />, color: 'text-purple-400' };
+    if (score >= 1500) return { name: 'Virtuoso', icon: <Music4 size={20} className="text-blue-400" />, color: 'text-blue-400' }; // ÍCONE CORRIGIDO
+    if (score >= 500) return { name: 'Trovador', icon: <Guitar size={20} className="text-green-400" />, color: 'text-green-400' };
+    return { name: 'Aprendiz', icon: <BookOpen size={20} className="text-gray-400" />, color: 'text-gray-400' };
+};
+
 
 const Sidebar = ({ 
-    periods, 
-    selectedPeriod, 
-    onSelectPeriod, 
-    hasInteracted, 
-    user, 
-    score, 
-    achievements,
-    stats,
-    onCustomLogin, // Alterado de onLoginSuccess
-    onLogout
+    periods, selectedPeriod, onSelectPeriod, hasInteracted, 
+    user, score, achievements, stats,
+    onCustomLogin, onLogout
 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = React.useRef(null);
     const [volume, setVolume] = useState(0.5);
     const [showProfileDetails, setShowProfileDetails] = useState(false);
+
+    const playerLevel = user ? getPlayerLevel(score) : null;
 
     React.useEffect(() => {
         if (!audioRef.current || !selectedPeriod || !hasInteracted) return;
@@ -72,8 +77,13 @@ const Sidebar = ({
                             className="w-16 h-16 rounded-full border-2 border-amber-400 mb-2"
                         />
                         <h2 className="font-semibold text-amber-200 truncate">{user.name}</h2>
+                        
+                        <div className={`flex items-center gap-2 mt-2 font-bold ${playerLevel.color}`}>
+                            {playerLevel.icon}
+                            <span>{playerLevel.name}</span>
+                        </div>
+
                         <div className="flex items-center gap-2 mt-1">
-                            <Award className="text-amber-400" size={18} />
                             <p className="text-stone-300 font-bold">{score} pontos</p>
                         </div>
 
@@ -111,7 +121,6 @@ const Sidebar = ({
                 ) : (
                     <div className="flex flex-col items-center">
                          <p className="text-stone-300 text-sm text-center mb-3">Faça login para salvar seu progresso e conquistas!</p>
-                         {/* Botão de Login Customizado */}
                          <button
                             onClick={onCustomLogin}
                             className="w-full flex items-center justify-center gap-3 px-4 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all"

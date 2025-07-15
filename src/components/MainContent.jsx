@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords, PlusSquare, Hash } from 'lucide-react';
+import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords, PlusSquare, Hash, Heart, Shield } from 'lucide-react';
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
@@ -59,31 +59,87 @@ const ChallengeHub = ({ setActiveChallenge }) => (
                 <h3 className="text-xl font-bold text-amber-300 font-serif">Ranking Geral</h3>
                 <p className="text-stone-400 mt-2 text-sm">Veja os maiores mestres da história.</p>
             </button>
+            <button onClick={() => setActiveChallenge('survival')} className="p-6 bg-red-800/50 rounded-lg border border-red-700/50 hover:bg-red-600/20 hover:border-red-500 transition-all group flex flex-col items-center col-span-1 md:col-span-2 lg:col-span-4">
+                <Shield size={32} className="mb-2 text-red-400"/>
+                <h3 className="text-xl font-bold text-red-300 font-serif">Modo Sobrevivência</h3>
+                <p className="text-stone-400 mt-2 text-sm">Quantas perguntas você consegue acertar antes de perder todas as vidas?</p>
+            </button>
         </div>
     </motion.div>
 );
 
+const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButtonClass }) => {
+    
+    useEffect(() => {
+        if (survival.isActive && !survival.question && !survival.isLoading) {
+            generateQuestion();
+        }
+    }, [survival.isActive, survival.question, survival.isLoading, generateQuestion]);
+
+    if (survival.isGameOver) {
+        return (
+            <motion.div initial={{opacity:0, scale: 0.8}} animate={{opacity:1, scale: 1}} className="text-center">
+                <h2 className="text-5xl font-bold text-red-400 mb-4">Fim de Jogo!</h2>
+                <p className="text-3xl text-white">Sua pontuação final foi:</p>
+                <p className="text-8xl font-bold text-amber-300 my-4">{survival.score}</p>
+                <button onClick={onStart} className="px-8 py-4 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500">
+                    Jogar Novamente
+                </button>
+            </motion.div>
+        )
+    }
+
+    return (
+        <div className="w-full">
+            <div className="flex justify-between items-center mb-6 p-4 bg-black/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold text-2xl text-amber-300">Pontos: {survival.score}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Heart key={i} size={32} className={`${i < survival.lives ? 'text-red-500 fill-current animate-pulse' : 'text-gray-600'}`} />
+                    ))}
+                </div>
+            </div>
+
+            {survival.isLoading && <LoadingSpinner />}
+            
+            {survival.question && !survival.isLoading && (
+                <motion.div 
+                    key={survival.question.text} // Forçar re-render na troca de pergunta
+                    initial={{opacity: 0, x: 50}} 
+                    animate={{opacity: 1, x: 0}}
+                    className="p-4 bg-black/30 rounded-md border border-amber-900/50"
+                >
+                    <p className="text-stone-300 text-xl font-semibold mb-4 text-center">
+                        "{survival.question.text}"
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {survival.question.options.map((option, index) => (
+                            <button 
+                                key={index} 
+                                onClick={() => onAnswer(option)} 
+                                disabled={survival.question.feedback !== undefined}
+                                className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, survival.question.answer, survival.question.guessedOption, survival.question.feedback !== undefined)} disabled:cursor-not-allowed`}
+                            >
+                                {option}
+                            </button>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+        </div>
+    )
+}
 
 const MainContent = ({ 
-    period, 
-    onCardClick, 
-    activeChallenge, 
-    setActiveChallenge,
-    quiz, 
-    onGenerateQuiz, 
-    onQuizGuess,
-    whoAmI,
-    onGenerateWhoAmI,
-    onWhoAmIGuess,
-    timeline,
-    onGenerateTimeline,
-    onCheckTimeline,
-    fromWhichPeriod,
-    onGenerateFromWhichPeriod,
-    onFromWhichPeriodGuess,
-    leaderboard,
-    user,
-    socket
+    period, onCardClick, activeChallenge, setActiveChallenge,
+    quiz, onGenerateQuiz, onQuizGuess,
+    whoAmI, onGenerateWhoAmI, onWhoAmIGuess,
+    timeline, onGenerateTimeline, onCheckTimeline,
+    fromWhichPeriod, onGenerateFromWhichPeriod, onFromWhichPeriodGuess,
+    leaderboard, user, socket,
+    survival, handleStartSurvival, generateSurvivalQuestion, handleSurvivalAnswer
 }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [timelineItems, setTimelineItems] = useState(timeline.items);
@@ -117,12 +173,15 @@ const MainContent = ({
         { id: 'quiz', label: 'Desafios' },
     ];
 
-    const getButtonClass = (option, answer, guessedOption, feedback) => {
-        if (!feedback) return 'bg-gray-700 hover:bg-gray-600';
+    const getButtonClass = (option, answer, guessedOption, hasFeedback) => {
+        if (!hasFeedback) return 'bg-gray-700 hover:bg-gray-600';
         const isCorrectAnswer = option.trim().toLowerCase() === answer.trim().toLowerCase();
-        const isGuessedOption = option.trim().toLowerCase() === guessedOption?.trim().toLowerCase();
+        
         if (isCorrectAnswer) return 'bg-green-600/70 border-green-500';
+        
+        const isGuessedOption = guessedOption && (option.trim().toLowerCase() === guessedOption.trim().toLowerCase());
         if (isGuessedOption) return 'bg-red-600/70 border-red-500';
+
         return 'bg-gray-700 opacity-60';
     };
 
@@ -166,7 +225,7 @@ const MainContent = ({
                 {sortedItems.length > 0 ? (
                     <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                         <AnimatePresence>
-                            {sortedItems.map((item, index) => (
+                            {sortedItems.map((item) => (
                                 <InfoCard 
                                     key={`${type}-${item.name || item.title}`}
                                     item={item} 
@@ -243,7 +302,14 @@ const MainContent = ({
     };
     
     const renderChallengeContent = () => {
-        const goBackToHub = () => setActiveChallenge(null);
+        const goBackToHub = () => {
+             setActiveChallenge(null);
+             if (survival.isActive || survival.isGameOver) {
+                // Reseta o jogo de sobrevivência ao sair
+                 handleStartSurvival(); 
+                 setActiveChallenge(null); // Garante que a tela de início apareça na próxima vez
+             }
+        };
 
         if (!activeChallenge) {
             return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
@@ -251,11 +317,11 @@ const MainContent = ({
         
         switch (activeChallenge) {
             case 'quiz':
-                return (
+                 return (
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
                         <h2 className="text-3xl mb-4 text-amber-300 font-title">Múltipla Escolha</h2>
-                        <button onClick={onGenerateQuiz} disabled={quiz.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => onGenerateQuiz()} disabled={quiz.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {quiz.isLoading ? 'Criando...' : 'Gerar Nova Pergunta'}
                         </button>
@@ -264,11 +330,36 @@ const MainContent = ({
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
                                 <p className="text-stone-300 text-lg font-semibold mb-4 text-justify">{quiz.question}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {quiz.options.map((option, index) => <button key={index} onClick={() => onQuizGuess(option)} disabled={!!quiz.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, quiz.answer, quiz.guessedOption, quiz.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
+                                    {quiz.options.map((option, index) => <button key={index} onClick={() => onQuizGuess(option)} disabled={!!quiz.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, quiz.answer, quiz.guessedOption, !!quiz.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
                                 </div>
                                 {quiz.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-justify">{quiz.feedback}</p>}
                             </div>
                         )}
+                    </motion.div>
+                );
+
+            case 'survival':
+                if (!survival.isActive && !survival.isGameOver) {
+                    return (
+                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="text-center bg-black/20 p-6 rounded-lg">
+                             <h2 className="text-3xl mb-4 text-red-300 font-title">Modo Sobrevivência</h2>
+                             <p className="text-stone-300 mb-6">Teste seus conhecimentos em uma maratona de perguntas. Você tem 3 vidas. Boa sorte!</p>
+                             <button onClick={handleStartSurvival} className="px-8 py-4 bg-green-600 text-white font-bold rounded-lg hover:bg-green-500">
+                                 Começar!
+                             </button>
+                        </motion.div>
+                    )
+                }
+                return (
+                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
+                        <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Desistir e Voltar</button>
+                        <SurvivalGame
+                            survival={survival}
+                            onAnswer={handleSurvivalAnswer}
+                            onStart={handleStartSurvival}
+                            generateQuestion={generateSurvivalQuestion}
+                            getButtonClass={getButtonClass}
+                        />
                     </motion.div>
                 );
 
@@ -277,7 +368,7 @@ const MainContent = ({
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
                         <h2 className="text-3xl mb-4 text-amber-300 font-title">Quem Sou Eu?</h2>
-                        <button onClick={onGenerateWhoAmI} disabled={whoAmI.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => onGenerateWhoAmI()} disabled={whoAmI.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {whoAmI.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
                         </button>
@@ -286,7 +377,7 @@ const MainContent = ({
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
                                 <p className="text-stone-300 text-lg italic font-semibold mb-4 text-center">"{whoAmI.description}"</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {whoAmI.options.map((option, index) => <button key={index} onClick={() => onWhoAmIGuess(option)} disabled={!!whoAmI.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, whoAmI.answer, whoAmI.guessedOption, whoAmI.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
+                                    {whoAmI.options.map((option, index) => <button key={index} onClick={() => onWhoAmIGuess(option)} disabled={!!whoAmI.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, whoAmI.answer, whoAmI.guessedOption, !!whoAmI.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
                                 </div>
                                 {whoAmI.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-justify">{whoAmI.feedback}</p>}
                             </div>
@@ -348,7 +439,7 @@ const MainContent = ({
                         
                         <p className="text-stone-400 mb-4">Leia a descrição e escolha o período musical correto.</p>
 
-                        <button onClick={onGenerateFromWhichPeriod} disabled={fromWhichPeriod.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => onGenerateFromWhichPeriod()} disabled={fromWhichPeriod.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {fromWhichPeriod.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
                         </button>
@@ -364,7 +455,7 @@ const MainContent = ({
                                             key={index} 
                                             onClick={() => onFromWhichPeriodGuess(option)} 
                                             disabled={!!fromWhichPeriod.feedback}
-                                            className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, fromWhichPeriod.answer, fromWhichPeriod.guessedOption, fromWhichPeriod.feedback)} disabled:cursor-not-allowed`}
+                                            className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, fromWhichPeriod.answer, fromWhichPeriod.guessedOption, !!fromWhichPeriod.feedback)} disabled:cursor-not-allowed`}
                                         >
                                             {option}
                                         </button>
@@ -413,7 +504,6 @@ const MainContent = ({
                         <BattleMode user={user} socket={socket} period={period} onBack={goBackToHub} />
                     </motion.div>
                 );
-
             default: return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
         }
     }

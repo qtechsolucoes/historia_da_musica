@@ -27,6 +27,16 @@ export const useMusicApp = () => {
     const [timeline, setTimeline] = useState({ items: [], correctOrder: [], feedback: '', isLoading: false, isChecked: false });
     const [fromWhichPeriod, setFromWhichPeriod] = useState({ description: '', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
 
+    const [survival, setSurvival] = useState({
+        isActive: false,
+        lives: 3,
+        score: 0,
+        question: null,
+        questionType: null,
+        isGameOver: false,
+        isLoading: false,
+    });
+
     const [currentUser, setCurrentUser] = useState(null);
     const [score, setScore] = useState(0);
     const [leaderboard, setLeaderboard] = useState([]);
@@ -217,16 +227,7 @@ export const useMusicApp = () => {
         }
     };
 
-    const handleGenerateQuiz = async () => {
-        setQuiz({ question: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
-        if (!selectedPeriod.composers || selectedPeriod.composers.length === 0) {
-            setQuiz({ question: 'Não há compositores disponíveis neste período.', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
-            return;
-        }
-        const randomComposer = selectedPeriod.composers[Math.floor(Math.random() * selectedPeriod.composers.length)];
-        
-        const prompt = `Aja como um professor de história da música. Crie uma pergunta de múltipla escolha sobre a biografia ou uma obra importante do compositor ${randomComposer.name}, que pertence ao período da ${selectedPeriod.name}.
-A pergunta deve ser clara e direta. As opções devem ser variadas em conteúdo e estilo, mas todas relacionadas ao tema. O texto deve ser escrito em português do Brasil.
+    const createQuestionPrompt = (composerName, periodName) => `Aja como um professor de história da música. Crie uma pergunta de múltipla escolha sobre a biografia ou uma obra importante do compositor ${composerName}, que pertence ao período da ${periodName}. A pergunta deve ser clara e direta. As opções devem ser variadas em conteúdo e estilo, mas todas relacionadas ao tema. O texto deve ser escrito em português do Brasil.
 
 Formato Exigido (use ;; como separador entre as opções):
 PERGUNTA: [Texto da pergunta aqui]
@@ -234,7 +235,23 @@ OPÇÕES: A. [Opção A];;B. [Opção B];;C. [Opção C];;D. [Opção D]
 RESPOSTA: [Apenas a LETRA da opção correta. Ex: C]
 
 Responda em português do Brasil.`;
+
+    const handleGenerateQuiz = async (returnOnly = false) => {
+        const stateUpdater = returnOnly ? () => {} : setQuiz;
+        stateUpdater(prev => ({ ...prev, isLoading: true }));
+
+        const targetPeriod = returnOnly ? musicHistoryData[Math.floor(Math.random() * musicHistoryData.length)] : selectedPeriod;
+
+        if (!targetPeriod.composers || targetPeriod.composers.length === 0) {
+            const errorState = { question: 'Não há compositores disponíveis neste período.', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null };
+            stateUpdater(errorState);
+            if (returnOnly) return { ...errorState, text: errorState.question };
+            return;
+        }
         
+        const randomComposer = targetPeriod.composers[Math.floor(Math.random() * targetPeriod.composers.length)];
+        const prompt = createQuestionPrompt(randomComposer.name, targetPeriod.name);
+
         try {
             const response = await fetch(`${backendUrl}/api/gemini`, {
                 method: 'POST',
@@ -247,94 +264,80 @@ Responda em português do Brasil.`;
             const result = await response.json();
             const text = result.candidates[0]?.content?.parts[0]?.text;
 
-            if (text) {
-                const lines = text.split('\n');
-                const questionLine = lines.find(line => line.startsWith('PERGUNTA:'));
-                const optionsLine = lines.find(line => line.startsWith('OPÇÕES:'));
-                const answerLine = lines.find(line => line.startsWith('RESPOSTA:'));
-                
-                if (questionLine && optionsLine && answerLine) {
-                    const question = questionLine.replace('PERGUNTA:', '').trim();
-                    const options = optionsLine.replace('OPÇÕES:', '').split(';;').map(opt => opt.trim());
-                    
-                    const correctLetter = answerLine.replace('RESPOSTA:', '').trim().toUpperCase();
-                    
-                    const answer = options.find(opt => opt.trim().toUpperCase().startsWith(correctLetter + '.'));
+            const lines = text.split('\n');
+            const questionText = lines.find(l => l.startsWith('PERGUNTA:'))?.replace('PERGUNTA:', '').trim();
+            const optionsText = lines.find(l => l.startsWith('OPÇÕES:'))?.replace('OPÇÕES:', '').trim();
+            const answerLetter = lines.find(l => l.startsWith('RESPOSTA:'))?.replace('RESPOSTA:', '').trim().toUpperCase();
 
-                    if (options.length === 4 && answer) {
-                        setQuiz({ question, options, answer, feedback: '', isLoading: false, guessedOption: null });
-                    } else { 
-                        throw new Error("A API retornou um formato de opções ou letra de resposta inválido."); 
-                    }
-                } else { 
-                    throw new Error("Formato de resposta da API inválido."); 
-                }
-            } else { 
-                throw new Error("Resposta da API vazia."); 
-            }
+            if (questionText && optionsText && answerLetter) {
+                const options = optionsText.split(';;').map(opt => opt.replace(/^[A-D]\.\s*/, '').trim());
+                const answer = options.find((opt, index) => 'ABCD'[index] === answerLetter);
+
+                if (options.length === 4 && answer) {
+                    const newQuestionData = { text: questionText, options, answer, feedback: undefined, guessedOption: null, isLoading: false };
+                    if (returnOnly) return newQuestionData;
+                    setQuiz({ ...newQuestionData, question: questionText });
+                } else { throw new Error("Dados da API inválidos (opções ou resposta)."); }
+            } else { throw new Error("Formato de resposta da API inválido."); }
         } catch (error) {
             console.error("Erro ao gerar desafio:", error);
-            setQuiz({ question: 'Não foi possível criar a pergunta no momento. Por favor, tente novamente.', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null });
+            const errorState = { question: 'Não foi possível criar a pergunta. Tente novamente.', options: [], answer: '', feedback: '', isLoading: false, guessedOption: null };
+            stateUpdater(errorState);
+            if (returnOnly) return { ...errorState, text: errorState.question };
         }
     };
 
     const handleQuizGuess = (guess) => {
         const isCorrect = quiz.answer.trim().toLowerCase() === guess.trim().toLowerCase();
         let feedbackMessage = isCorrect ? 'Correto! Você conhece a história.' : `Incorreto. A resposta correta era: ${quiz.answer}`;
-        if (isCorrect) {
-            handleCorrectAnswer();
-        } else {
-            handleIncorrectAnswer();
-        }
+        if (isCorrect) handleCorrectAnswer(); else handleIncorrectAnswer();
         setQuiz(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
     };
+    
+    const handleGenerateWhoAmI = async (returnOnly = false) => {
+        const stateUpdater = returnOnly ? () => {} : setWhoAmI;
+        stateUpdater(prev => ({ ...prev, isLoading: true }));
+        
+        const targetPeriod = returnOnly ? musicHistoryData[Math.floor(Math.random() * musicHistoryData.length)] : selectedPeriod;
 
-    const handleGenerateWhoAmI = async () => {
-        setWhoAmI({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
-        if (!selectedPeriod.composers || selectedPeriod.composers.length < 4) {
-             setWhoAmI(prev => ({...prev, isLoading: false, description: "Este período não tem compositores suficientes para o desafio."}));
+        if (!targetPeriod.composers || targetPeriod.composers.length < 4) {
+             const errorState = { isLoading: false, description: "Este período não tem compositores suficientes."};
+             stateUpdater(prev => ({...prev, ...errorState}));
+             if (returnOnly) return { ...errorState, text: errorState.description };
              return;
         }
-        let randomComposers = [...selectedPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
+        let randomComposers = [...targetPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
         const correctComposer = randomComposers[0];
         const prompt = `Crie uma descrição curta e enigmática para o desafio "Quem sou eu?" sobre o compositor ${correctComposer.name}. A descrição deve ter de 2 a 3 frases, destacando uma característica única, uma obra famosa ou um fato curioso de sua vida, sem mencionar o nome. Deve ser um desafio para um estudante de música. Responda apenas com a descrição, em português do Brasil.`;
         
         try {
-            const response = await fetch(`${backendUrl}/api/gemini`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
-            });
-            
+            const response = await fetch(`${backendUrl}/api/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
             if (!response.ok) throw new Error("Falha ao comunicar com o servidor.");
-
             const result = await response.json();
             const description = result.candidates[0]?.content?.parts[0]?.text;
 
             if(description){
-                setWhoAmI({
-                    description: description.trim(),
+                const newQuestionData = {
+                    text: description.trim(),
                     options: randomComposers.map(c => c.name).sort(() => 0.5 - Math.random()),
                     answer: correctComposer.name,
-                    isLoading: false,
-                    feedback: '',
-                    guessedOption: null
-                });
+                    feedback: undefined, guessedOption: null, isLoading: false
+                };
+                if(returnOnly) return newQuestionData;
+                setWhoAmI({ ...newQuestionData, description: newQuestionData.text });
             } else { throw new Error("API não retornou descrição."); }
         } catch (error) {
             console.error("Erro ao gerar 'Quem sou eu?':", error);
-            setWhoAmI(prev => ({...prev, isLoading: false, description: "Não foi possível criar o desafio. Tente novamente."}));
+            const errorState = { isLoading: false, description: "Não foi possível criar o desafio. Tente novamente." };
+            stateUpdater(prev => ({...prev, ...errorState}));
+            if(returnOnly) return { ...errorState, text: errorState.description };
         }
     };
-    
+
     const handleWhoAmIGuess = (guess) => {
         const isCorrect = guess === whoAmI.answer;
         let feedbackMessage = isCorrect ? 'Correto! Você desvendou o enigma.' : `Errado! O compositor era ${whoAmI.answer}.`;
-        if (isCorrect) {
-             handleCorrectAnswer();
-        } else {
-             handleIncorrectAnswer();
-        }
+        if (isCorrect) handleCorrectAnswer(); else handleIncorrectAnswer();
         setWhoAmI(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
     };
 
@@ -346,33 +349,14 @@ Responda em português do Brasil.`;
         }
         const randomComposers = [...selectedPeriod.composers].sort(() => 0.5 - Math.random()).slice(0, 4);
         
-        const correctOrder = [...randomComposers]
-            .sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan))
-            .map(c => c.name);
-
-        const shuffledItems = [...randomComposers]
-            .map(c => ({ name: c.name, lifespan: c.lifespan }))
-            .sort(() => 0.5 - Math.random());
+        const correctOrder = [...randomComposers].sort((a, b) => getBirthYear(a.lifespan) - getBirthYear(b.lifespan)).map(c => c.name);
+        const shuffledItems = [...randomComposers].map(c => ({ name: c.name, lifespan: c.lifespan })).sort(() => 0.5 - Math.random());
             
-        setTimeline({
-            items: shuffledItems,
-            correctOrder: correctOrder,
-            feedback: '',
-            isLoading: false,
-            isChecked: false
-        });
+        setTimeline({ items: shuffledItems, correctOrder, feedback: '', isLoading: false, isChecked: false });
     };
     
     const handleCheckTimeline = (userOrder, setTimelineItems) => {
-        let isOrderCorrect = true;
-        for (let i = 1; i < userOrder.length; i++) {
-            const prevYear = getBirthYear(userOrder[i - 1].lifespan);
-            const currentYear = getBirthYear(userOrder[i].lifespan);
-            if (prevYear > currentYear) {
-                isOrderCorrect = false;
-                break;
-            }
-        }
+        const isOrderCorrect = userOrder.every((item, index) => item.name === timeline.correctOrder[index]);
     
         if (isOrderCorrect) {
             handleCorrectAnswer();
@@ -385,8 +369,10 @@ Responda em português do Brasil.`;
         }
     };
 
-    const handleGenerateFromWhichPeriod = async () => {
-        setFromWhichPeriod({ description: '', options: [], answer: '', feedback: '', isLoading: true, guessedOption: null });
+    const handleGenerateFromWhichPeriod = async (returnOnly = false) => {
+        const stateUpdater = returnOnly ? () => {} : setFromWhichPeriod;
+        stateUpdater(prev => ({ ...prev, isLoading: true }));
+        
         const randomPeriod = musicHistoryData[Math.floor(Math.random() * musicHistoryData.length)];
         const periodName = randomPeriod.name;
         const prompt = `Aja como um historiador da música criando um desafio. Gere uma descrição de 2 a 3 frases sobre uma característica, obra, compositor ou instrumento marcante do período da "${periodName}". A descrição deve ser enigmática, sem mencionar o nome do período. O objetivo é que o jogador adivinhe o período.
@@ -396,73 +382,108 @@ Responda em português do Brasil.`;
     Responda apenas com a descrição, em português do Brasil.`;
     
         try {
-            const response = await fetch(`${backendUrl}/api/gemini`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
-            });
+            const response = await fetch(`${backendUrl}/api/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
             if (!response.ok) throw new Error("Falha ao comunicar com a IA.");
             const result = await response.json();
             const description = result.candidates[0]?.content?.parts[0]?.text;
+
             if (description) {
-                setFromWhichPeriod({
-                    description: description.trim(),
+                const newQuestionData = {
+                    text: description.trim(),
                     options: musicHistoryData.map(p => p.name).sort(() => 0.5 - Math.random()), 
                     answer: periodName,
-                    isLoading: false,
-                    feedback: '',
-                    guessedOption: null
-                });
-            } else {
-                throw new Error("A API não retornou uma descrição.");
-            }
+                    feedback: undefined, guessedOption: null, isLoading: false
+                };
+                if(returnOnly) return newQuestionData;
+                setFromWhichPeriod({ ...newQuestionData, description: newQuestionData.text });
+            } else { throw new Error("A API não retornou uma descrição."); }
         } catch (error) {
             console.error("Erro ao gerar 'De Que Período?':", error);
-            setFromWhichPeriod(prev => ({...prev, isLoading: false, description: "Não foi possível criar o desafio. Tente novamente."}));
+            const errorState = { isLoading: false, description: "Não foi possível criar o desafio. Tente novamente." };
+            stateUpdater(prev => ({...prev, ...errorState}));
+            if(returnOnly) return { ...errorState, text: errorState.description };
         }
     };
 
     const handleFromWhichPeriodGuess = (guess) => {
         const isCorrect = guess === fromWhichPeriod.answer;
         let feedbackMessage = isCorrect ? 'Correto! Você sabe identificar as eras da música.' : `Incorreto. A resposta correta era: ${fromWhichPeriod.answer}.`;
-        if (isCorrect) {
-            handleCorrectAnswer();
-        } else {
-            handleIncorrectAnswer();
-        }
+        if (isCorrect) handleCorrectAnswer(); else handleIncorrectAnswer();
         setFromWhichPeriod(prev => ({ ...prev, feedback: feedbackMessage, guessedOption: guess }));
     };
 
-    return {
-        selectedPeriod,
-        modalContent,
-        activeChallenge,
-        quiz,
-        whoAmI,
-        timeline,
-        fromWhichPeriod,
-        currentUser,
-        score,
-        leaderboard,
-        achievements,
-        stats,
-        lastAchievement,
-        correctSoundRef,
-        incorrectSoundRef,
-        handleOpenModal,
-        handleCloseModal,
-        handleSelectPeriod,
-        setActiveChallenge,
-        handleCustomLogin,
-        handleLogout,
-        handleGenerateQuiz,
-        handleQuizGuess,
-        handleGenerateWhoAmI,
-        handleWhoAmIGuess,
-        handleGenerateTimeline,
-        handleCheckTimeline,
-        handleGenerateFromWhichPeriod,
-        handleFromWhichPeriodGuess,
-        setLastAchievement,
+    const handleStartSurvival = () => {
+        setActiveChallenge('survival');
+        setSurvival({
+            isActive: true,
+            lives: 3,
+            score: 0,
+            question: null,
+            questionType: null,
+            isGameOver: false,
+            isLoading: false,
+        });
     };
-}
+
+    const generateSurvivalQuestion = async () => {
+        setSurvival(prev => ({ ...prev, isLoading: true, question: null }));
+        const challengeTypes = ['quiz', 'whoami', 'fromWhichPeriod'];
+        const randomType = challengeTypes[Math.floor(Math.random() * challengeTypes.length)];
+
+        let questionData = null;
+        switch (randomType) {
+            case 'quiz':
+                questionData = await handleGenerateQuiz(true);
+                break;
+            case 'whoami':
+                questionData = await handleGenerateWhoAmI(true);
+                break;
+            case 'fromWhichPeriod':
+                questionData = await handleGenerateFromWhichPeriod(true);
+                break;
+        }
+        
+        setSurvival(prev => ({
+            ...prev,
+            question: questionData,
+            questionType: randomType,
+            isLoading: false
+        }));
+    };
+
+    const handleSurvivalAnswer = (guess) => {
+        if (!survival.question || survival.question.feedback !== undefined) return;
+        
+        const isCorrect = guess.trim().toLowerCase() === survival.question.answer.trim().toLowerCase();
+
+        setSurvival(prev => ({ ...prev, question: { ...prev.question, feedback: isCorrect, guessedOption: guess }}));
+        
+        if (isCorrect) {
+            correctSoundRef.current?.play().catch(console.error);
+            setSurvival(prev => ({ ...prev, score: prev.score + 10 }));
+            setTimeout(generateSurvivalQuestion, 1200);
+        } else {
+            incorrectSoundRef.current?.play().catch(console.error);
+            const newLives = survival.lives - 1;
+            setTimeout(() => {
+                if (newLives > 0) {
+                    setSurvival(prev => ({ ...prev, lives: newLives }));
+                    generateSurvivalQuestion();
+                } else {
+                    setSurvival(prev => ({ ...prev, lives: 0, isActive: false, isGameOver: true }));
+                }
+            }, 1200);
+        }
+    };
+
+    return {
+        selectedPeriod, modalContent, activeChallenge, quiz, whoAmI, timeline, fromWhichPeriod,
+        currentUser, score, leaderboard, achievements, stats, lastAchievement,
+        correctSoundRef, incorrectSoundRef,
+        handleOpenModal, handleCloseModal, handleSelectPeriod, setActiveChallenge, handleCustomLogin,
+        handleLogout, handleGenerateQuiz, handleQuizGuess, handleGenerateWhoAmI, handleWhoAmIGuess,
+        handleGenerateTimeline, handleCheckTimeline, handleGenerateFromWhichPeriod, handleFromWhichPeriodGuess,
+        setLastAchievement,
+        survival, handleStartSurvival, generateSurvivalQuestion, handleSurvivalAnswer
+    };
+};

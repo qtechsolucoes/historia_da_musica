@@ -53,20 +53,25 @@ const AppLayout = () => {
                         activeChallenge={musicAppProps.activeChallenge}
                         setActiveChallenge={musicAppProps.setActiveChallenge}
                         quiz={musicAppProps.quiz}
-                        onGenerateQuiz={musicAppProps.handleGenerateQuiz}
-                        onQuizGuess={musicAppProps.handleQuizGuess}
+                        onGenerateQuiz={musicAppProps.onGenerateQuiz}
+                        onQuizGuess={musicAppProps.onQuizGuess}
                         whoAmI={musicAppProps.whoAmI}
-                        onGenerateWhoAmI={musicAppProps.handleGenerateWhoAmI}
-                        onWhoAmIGuess={musicAppProps.handleWhoAmIGuess}
+                        onGenerateWhoAmI={musicAppProps.onGenerateWhoAmI}
+                        onWhoAmIGuess={musicAppProps.onWhoAmIGuess}
                         timeline={musicAppProps.timeline}
-                        onGenerateTimeline={musicAppProps.handleGenerateTimeline}
-                        onCheckTimeline={musicAppProps.handleCheckTimeline}
+                        onGenerateTimeline={musicAppProps.onGenerateTimeline}
+                        onCheckTimeline={musicAppProps.onCheckTimeline}
                         fromWhichPeriod={musicAppProps.fromWhichPeriod}
-                        onGenerateFromWhichPeriod={musicAppProps.handleGenerateFromWhichPeriod}
-                        onFromWhichPeriodGuess={musicAppProps.handleFromWhichPeriodGuess}
+                        onGenerateFromWhichPeriod={musicAppProps.onGenerateFromWhichPeriod}
+                        onFromWhichPeriodGuess={musicAppProps.onFromWhichPeriodGuess}
                         leaderboard={musicAppProps.leaderboard}
                         user={musicAppProps.currentUser}
                         socket={socket}
+                        // --- PROPS DO MODO SOBREVIVÊNCIA ---
+                        survival={musicAppProps.survival}
+                        handleStartSurvival={musicAppProps.handleStartSurvival}
+                        generateSurvivalQuestion={musicAppProps.generateSurvivalQuestion}
+                        handleSurvivalAnswer={musicAppProps.handleSurvivalAnswer}
                     />
                 )}
             </div>
@@ -92,7 +97,6 @@ export default function App() {
 
     return (
         <GoogleOAuthProvider clientId={googleClientId}>
-             {/* Este container agora permite que o conteúdo interno cresça e cause scroll na página */}
             <div className="min-h-screen w-full bg-gray-900">
                 <style>{`
                     @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap');

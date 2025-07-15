@@ -1,4 +1,5 @@
 const Game = require('../models/Game');
+const User = require('../models/User'); // Importar o modelo User
 
 const activeGames = {};
 const gameTimers = {};
@@ -42,7 +43,7 @@ async function endRound(io, accessCode) {
 async function startNextQuestion(io, accessCode) {
     const gameSession = activeGames[accessCode];
     if (!gameSession || gameSession.isStartingNextQuestion) {
-        return; // Retorna imediatamente se uma transição já estiver em andamento.
+        return; 
     }
     gameSession.isStartingNextQuestion = true;
 
@@ -60,8 +61,23 @@ async function startNextQuestion(io, accessCode) {
     const nextIndex = game.currentQuestionIndex + 1;
     if (nextIndex >= game.quiz.questions.length) {
         game.status = 'finished';
+        
+        // --- LÓGICA DE PREMIAÇÃO PARA O VENCEDOR ---
+        const finalRanking = game.players.sort((a, b) => b.score - a.score);
+        if (finalRanking.length > 0) {
+            const winner = finalRanking[0];
+            if (winner.email) {
+                // Adiciona 50 pontos ao score total do usuário vencedor
+                await User.findOneAndUpdate(
+                    { email: winner.email },
+                    { $inc: { score: 50 } }
+                );
+            }
+        }
+        // --- FIM DA LÓGICA DE PREMIAÇÃO ---
+
         await game.save();
-        io.to(accessCode).emit('kahoot:game_over', { players: game.players.sort((a, b) => b.score - a.score) });
+        io.to(accessCode).emit('kahoot:game_over', { players: finalRanking });
         if (activeGames[accessCode]) delete activeGames[accessCode];
         if (gameTimers[accessCode]) delete gameTimers[accessCode];
         return;
@@ -81,7 +97,7 @@ async function startNextQuestion(io, accessCode) {
     };
     
     io.to(accessCode).emit('kahoot:new_question', questionData);
-    gameSession.isStartingNextQuestion = false; // Libera o bloqueio
+    gameSession.isStartingNextQuestion = false;
     
     let timeRemaining = questionData.time;
     const tickInterval = setInterval(() => {
@@ -107,7 +123,6 @@ function initializeKahootManager(io) {
                 game.hostSocketId = socket.id;
                 await game.save();
                 if (!activeGames[accessCode]) {
-                    // CORREÇÃO: Inicializa a flag de bloqueio aqui
                     activeGames[accessCode] = { 
                         playerAnswers: new Map(),
                         isStartingNextQuestion: false 
