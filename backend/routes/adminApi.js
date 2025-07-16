@@ -12,6 +12,39 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 let jobQueue = [];
 let isWorkerRunning = false;
 
+// Função aprimorada para extrair e limpar o JSON
+function extractAndParseJson(text) {
+    // 1. Encontra o início e o fim do array JSON
+    const startIndex = text.indexOf('[');
+    const endIndex = text.lastIndexOf(']');
+
+    if (startIndex === -1 || endIndex === -1) {
+        throw new Error("A IA não retornou um array JSON válido (delimitadores `[` ou `]` não encontrados).");
+    }
+
+    let jsonString = text.substring(startIndex, endIndex + 1);
+
+    // 2. Tenta fazer o parse diretamente
+    try {
+        return JSON.parse(jsonString);
+    } catch (e) {
+        // 3. Se falhar, tenta corrigir problemas comuns (como vírgulas extras no final) e tenta novamente
+        console.warn("AVISO: JSON inicial malformado, a tentar corrigir...");
+        
+        // Remove vírgulas extras antes de fechar colchetes ou chaves
+        jsonString = jsonString.replace(/,\s*(\]|\})/g, '$1');
+        
+        try {
+            return JSON.parse(jsonString);
+        } catch (finalError) {
+            console.error("ERRO FINAL: Não foi possível fazer o parse do JSON mesmo após a tentativa de correção.", finalError.message);
+            console.error("JSON problemático:", jsonString);
+            throw new Error("Falha ao fazer o parse da resposta da IA após a correção.");
+        }
+    }
+}
+
+
 async function processQueue() {
     if (jobQueue.length === 0) {
         console.log("Fila de tarefas concluída. O trabalhador vai dormir.");
@@ -31,26 +64,15 @@ async function processQueue() {
             As perguntas devem ser EXCLUSIVAMENTE sobre o período: ${job.period}.
             A dificuldade geral deve ser: ${job.difficulty}.
             Para cada pergunta, forneça o texto, 4 opções de resposta e o índice da resposta correta.
-            Responda APENAS com um array de objetos JSON válido.
+            Responda APENAS com um array de objetos JSON válido, sem nenhum texto introdutório ou final.
+            Certifique-se de que todas as strings dentro do JSON estão devidamente escapadas.
         `;
 
         const result = await model.generateContent(prompt);
         let responseText = await result.response.text();
-
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) throw new Error("A IA não retornou um JSON válido.");
         
-        let jsonString = jsonMatch[0];
-
-        // --- NOVA LÓGICA DE LIMPEZA ---
-        // Tenta corrigir aspas não escapadas dentro dos valores das chaves, que é um erro comum da IA.
-        // Isto transforma "key": "valor com "aspas" internas" em "key": "valor com \\"aspas\\" internas"
-        jsonString = jsonString.replace(/:\s*"(.*?)"/g, (match, group1) => {
-            const cleanedValue = group1.replace(/"/g, '\\"');
-            return `: "${cleanedValue}"`;
-        });
-        
-        const generatedQuestions = JSON.parse(jsonString);
+        // Usa a nova função robusta para extrair e fazer o parse do JSON
+        const generatedQuestions = extractAndParseJson(responseText);
 
         const questionsToSave = generatedQuestions.map(q => ({ ...q, period: job.period, difficulty: job.difficulty }));
         
@@ -66,7 +88,8 @@ async function processQueue() {
         }
     }
 
-    setTimeout(processQueue, 20000); 
+    // Aumenta o intervalo para dar mais tempo à API e evitar sobrecarga
+    setTimeout(processQueue, 25000); 
 }
 
 router.post('/schedule-population', (req, res) => {

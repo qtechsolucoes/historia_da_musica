@@ -173,13 +173,12 @@ router.post('/gemini',
         }
 
         const maxRetries = 3;
-        let attempt = 0;
         const prompt = req.body.prompt;
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
-        while (attempt < maxRetries) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                console.log(`Tentativa ${attempt + 1} de chamar a API Gemini...`);
+                console.log(`Tentativa ${attempt} de chamar a API Gemini...`);
                 const result = await model.generateContent(prompt);
                 const response = result.response;
                 const text = await response.text();
@@ -188,19 +187,20 @@ router.post('/gemini',
                 return res.status(200).json({ candidates: [{ content: { parts: [{ text: text }] } }] });
 
             } catch (error) {
-                attempt++;
                 console.error(`Erro na tentativa ${attempt}:`, error.message);
 
-                // Se for um erro 503 e ainda tivermos tentativas...
-                if (error.status === 503 && attempt < maxRetries) {
-                    // Espera 2 segundos antes de tentar novamente (backoff exponencial)
-                    const delay = Math.pow(2, attempt) * 1000;
-                    console.log(`Modelo sobrecarregado. Tentando novamente em ${delay / 1000} segundos...`);
+                // Se for um erro 503 (Service Unavailable) ou 429 (Too Many Requests) e ainda tivermos tentativas...
+                const isRetryable = error.status === 503 || error.status === 429;
+                
+                if (isRetryable && attempt < maxRetries) {
+                    // Espera exponencialmente antes de tentar novamente (1s, 2s, 4s)
+                    const delay = Math.pow(2, attempt - 1) * 1000;
+                    console.log(`Modelo sobrecarregado ou limite de taxa atingido. Tentando novamente em ${delay / 1000} segundos...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    // Se não for um erro 503 ou se esgotaram as tentativas, envia o erro.
+                    // Se não for um erro recuperável ou se esgotaram as tentativas, envia o erro.
                     return res.status(error.status || 500).json({ 
-                        error: "Ocorreu um erro ao processar a sua solicitação com a IA.",
+                        error: "Ocorreu um erro ao processar a sua solicitação com a IA após múltiplas tentativas.",
                         details: error.message
                     });
                 }

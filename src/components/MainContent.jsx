@@ -104,7 +104,8 @@ const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButton
 
             {survival.isLoading && <LoadingSpinner />}
             
-            {survival.question && !survival.isLoading && (
+            {/* CORREÇÃO: Adicionada verificação para survival.question e survival.question.options */}
+            {survival.question && survival.question.options && !survival.isLoading && (
                 <motion.div 
                     key={survival.question.text}
                     initial={{opacity: 0, x: 50}} 
