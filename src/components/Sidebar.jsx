@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus, BookOpen, Guitar, Music4, Crown, X } from 'lucide-react';
+
+import { useMusicAppStore } from '../store/musicAppStore';
+import { musicHistoryData } from '../data/musicHistoryData';
 
 const getPlayerLevel = (score) => {
     if (score >= 10000) return { name: 'Kapellmeister', icon: <Crown size={20} className="text-yellow-400" />, color: 'text-yellow-400' };
@@ -9,38 +13,66 @@ const getPlayerLevel = (score) => {
     return { name: 'Aprendiz', icon: <BookOpen size={20} className="text-gray-400" />, color: 'text-gray-400' };
 };
 
-const Sidebar = ({ 
-    periods, selectedPeriod, onSelectPeriod, 
-    user, score, achievements, stats,
-    onCustomLogin, onLogout,
-    isOpen, onClose, hasInteracted // A prop hasInteracted é recebida aqui
-}) => {
+const Sidebar = ({ isOpen, onClose, hasInteracted }) => {
+    const {
+        selectedPeriodId,
+        currentUser,
+        score,
+        achievements,
+        stats,
+        login,
+        logout,
+        handleSelectPeriod
+    } = useMusicAppStore();
+
+    const selectedPeriod = musicHistoryData.find(p => p.id === selectedPeriodId);
+    
     const [isPlaying, setIsPlaying] = useState(false);
-    const audioRef = React.useRef(null);
+    const audioRef = useRef(null);
     const [volume, setVolume] = useState(0.5);
     const [showProfileDetails, setShowProfileDetails] = useState(false);
-    // O estado local 'hasInteracted' foi removido daqui.
+    
+    const playerLevel = currentUser ? getPlayerLevel(score) : null;
 
-    const playerLevel = user ? getPlayerLevel(score) : null;
+    const handleCustomLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            const googleResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + tokenResponse.access_token);
+            const profile = await googleResponse.json();
+            login(profile);
+        },
+        onError: (error) => console.log('Login Failed:', error)
+    });
 
+    // --- LÓGICA CORRIGIDA AQUI ---
     useEffect(() => {
-        if (!hasInteracted) return; // Depende da prop agora
+        if (!hasInteracted) return; // Só faz algo após a primeira interação do utilizador
 
         if (audioRef.current && selectedPeriod?.referenceSong) {
             const isNewSong = !audioRef.current.src.endsWith(selectedPeriod.referenceSong);
+            
+            // Se for uma nova música, atualiza o src e tenta tocar.
             if (isNewSong) {
                 audioRef.current.src = selectedPeriod.referenceSong;
+                audioRef.current.play().catch(e => {
+                    console.error("Reprodução automática falhou. O utilizador pode precisar de clicar em play.", e);
+                    setIsPlaying(false);
+                });
             }
-            audioRef.current.play().catch(() => setIsPlaying(false));
         }
-    }, [selectedPeriod, hasInteracted]);
+    }, [selectedPeriod, hasInteracted]); // A dependência de 'isPlaying' foi removida para evitar loops
     
     useEffect(() => {
         if (audioRef.current) audioRef.current.volume = volume;
     }, [volume]);
 
     const handlePlayPause = () => {
-        if (!audioRef.current?.src) return;
+        if (!audioRef.current?.src) {
+            if (selectedPeriod?.referenceSong) {
+                audioRef.current.src = selectedPeriod.referenceSong;
+            } else {
+                return;
+            }
+        };
         isPlaying ? audioRef.current.pause() : audioRef.current.play().catch(console.error);
     };
 
@@ -63,7 +95,7 @@ const Sidebar = ({
     return (
         <aside 
             className={`w-64 bg-black/50 backdrop-blur-md flex flex-col flex-shrink-0 transition-transform duration-300 ease-in-out md:static md:translate-x-0 fixed inset-y-0 left-0 z-40 border-r-2 border-amber-900/50 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
-            onClick={(e) => e.stopPropagation()} // Evita que o clique feche o menu se clicar na própria sidebar
+            onClick={(e) => e.stopPropagation()}
         >
             <header className="relative text-center p-4 border-b-2 border-amber-900/50">
                  <button onClick={onClose} className="md:hidden absolute top-2 right-2 p-2 text-stone-300 hover:text-white">
@@ -75,14 +107,14 @@ const Sidebar = ({
             </header>
 
             <div className="p-4 border-b-2 border-amber-900/50">
-                {user ? (
+                {currentUser ? (
                     <div className="flex flex-col items-center text-center">
                         <img 
-                            src={user.picture} 
-                            alt={user.name} 
+                            src={currentUser.picture} 
+                            alt={currentUser.name} 
                             className="w-16 h-16 rounded-full border-2 border-amber-400 mb-2"
                         />
-                        <h2 className="font-semibold text-amber-200 truncate">{user.name}</h2>
+                        <h2 className="font-semibold text-amber-200 truncate">{currentUser.name}</h2>
                         
                         <div className={`flex items-center gap-2 mt-2 font-bold ${playerLevel.color}`}>
                             {playerLevel.icon}
@@ -119,7 +151,7 @@ const Sidebar = ({
                             </div>
                         )}
                         
-                        <button onClick={onLogout} className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/20 text-red-200 border border-red-500 rounded-md hover:bg-red-600/40 transition-all">
+                        <button onClick={logout} className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/20 text-red-200 border border-red-500 rounded-md hover:bg-red-600/40 transition-all">
                             <LogOut size={16} />
                             Sair
                         </button>
@@ -128,7 +160,7 @@ const Sidebar = ({
                     <div className="flex flex-col items-center">
                          <p className="text-stone-300 text-sm text-center mb-3">Faça login para salvar seu progresso e conquistas!</p>
                          <button
-                            onClick={onCustomLogin}
+                            onClick={() => handleCustomLogin()}
                             className="w-full flex items-center justify-center gap-3 px-4 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all"
                          >
                             <UserPlus size={18}/>
@@ -140,15 +172,15 @@ const Sidebar = ({
             
             <nav className="flex-1 p-4 overflow-y-auto scrollbar-thin">
                 <ul className="space-y-2">
-                    {periods.map(period => (
+                    {musicHistoryData.map(period => (
                         <li key={period.id}>
                             <button 
                                 onClick={() => {
-                                    onSelectPeriod(period.id);
+                                    handleSelectPeriod(period.id);
                                     onClose();
                                 }}
                                 className={`w-full text-left px-4 py-3 rounded-md text-base font-semibold transition-all duration-200 flex items-center gap-3
-                                    ${selectedPeriod?.id === period.id 
+                                    ${selectedPeriodId === period.id 
                                         ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/20' 
                                         : 'text-amber-200 hover:bg-gray-700/50'
                                     }`}

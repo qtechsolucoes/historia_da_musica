@@ -102,7 +102,6 @@ const SubmitButton = ({ isLoading, error }) => (
     </div>
 );
 
-
 // --- COMPONENTE PRINCIPAL ---
 const CreateQuiz = ({ socket }) => {
     const [questionSource, setQuestionSource] = useState('database');
@@ -136,7 +135,7 @@ const CreateQuiz = ({ socket }) => {
     };
 
     const handleSaveQuestion = () => {
-        if (!editingQuestion.text || editingQuestion.options.some(opt => !opt)) {
+        if (!editingQuestion.text.trim() || editingQuestion.options.some(opt => !opt.trim())) {
             setError('Preencha o texto da pergunta e todas as opções.');
             setTimeout(() => setError(''), 3000);
             return;
@@ -169,14 +168,22 @@ const CreateQuiz = ({ socket }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        if (!formData.title || formData.periods.length === 0) {
-            setError('Por favor, preencha o título e selecione pelo menos um período.');
+
+        // --- VALIDAÇÃO REFINADA ---
+        if (!formData.title.trim()) {
+            setError('Por favor, preencha o título do quiz.');
+            return;
+        }
+        if (formData.periods.length === 0) {
+            setError('É necessário selecionar pelo menos um período musical.');
             return;
         }
         if (questionSource === 'manual' && manualQuestions.length === 0) {
-            setError('Adicione pelo menos uma pergunta para criar o quiz.');
+            setError('Adicione pelo menos uma pergunta para criar o quiz no modo manual.');
             return;
         }
+        // --- FIM DA VALIDAÇÃO ---
+
         setIsLoading(true);
         const payload = { ...formData, questionSource, questions: manualQuestions, questionCount: questionSource === 'database' ? formData.questionCount : manualQuestions.length };
         try {

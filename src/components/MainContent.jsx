@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks, Swords, PlusSquare, Hash, Heart, Shield } from 'lucide-react';
+
+// 1. Importar o store e os dados necessários
+import { useMusicAppStore } from '../store/musicAppStore';
+import { musicHistoryData } from '../data/musicHistoryData';
+
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
 import LoadingSpinner from './LoadingSpinner';
@@ -69,7 +74,6 @@ const ChallengeHub = ({ setActiveChallenge }) => (
 );
 
 const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButtonClass }) => {
-    
     useEffect(() => {
         if (survival.isActive && !survival.question && !survival.isLoading) {
             generateQuestion();
@@ -104,7 +108,6 @@ const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButton
 
             {survival.isLoading && <LoadingSpinner />}
             
-            {/* CORREÇÃO: Adicionada verificação para survival.question e survival.question.options */}
             {survival.question && survival.question.options && !survival.isLoading && (
                 <motion.div 
                     key={survival.question.text}
@@ -133,18 +136,37 @@ const SurvivalGame = ({ survival, onAnswer, onStart, generateQuestion, getButton
     )
 }
 
-const MainContent = ({ 
-    period, onCardClick, activeChallenge, setActiveChallenge,
-    quiz, onGenerateQuiz, onQuizGuess,
-    whoAmI, onGenerateWhoAmI, onWhoAmIGuess,
-    timeline, onGenerateTimeline, onCheckTimeline,
-    fromWhichPeriod, onGenerateFromWhichPeriod, onFromWhichPeriodGuess,
-    leaderboard, user, socket,
-    survival, handleStartSurvival, generateSurvivalQuestion, handleSurvivalAnswer
-}) => {
-    const [activeTab, setActiveTab] = useState('overview');
-    const [timelineItems, setTimelineItems] = useState(timeline.items);
+const MainContent = ({ socket, sounds }) => {
+    // Selecionar todo o estado e ações necessárias diretamente do store
+    const {
+        selectedPeriodId,
+        handleOpenModal,
+        activeChallenge,
+        setActiveChallenge,
+        quiz,
+        handleGenerateQuiz,
+        handleQuizGuess,
+        whoAmI,
+        handleGenerateWhoAmI,
+        handleWhoAmIGuess,
+        timeline,
+        handleGenerateTimeline,
+        handleCheckTimeline,
+        setTimelineItems,
+        fromWhichPeriod,
+        handleGenerateFromWhichPeriod,
+        handleFromWhichPeriodGuess,
+        leaderboard,
+        currentUser,
+        survival,
+        handleStartSurvival,
+        generateSurvivalQuestion,
+        handleSurvivalAnswer
+    } = useMusicAppStore();
+
+    const period = musicHistoryData.find(p => p.id === selectedPeriodId);
     
+    const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('name');
 
@@ -154,14 +176,10 @@ const MainContent = ({
     }, [activeTab]);
 
     useEffect(() => {
-        setTimelineItems(timeline.items);
-    }, [timeline.items]);
-
-    useEffect(() => {
         if (activeTab !== 'quiz') {
             setActiveChallenge(null);
         }
-    }, [activeTab, setActiveChallenge]);
+    }, [activeTab]);
 
     const tabs = [
         { id: 'overview', label: 'Visão Geral' },
@@ -231,7 +249,7 @@ const MainContent = ({
                                     key={`${type}-${item.name || item.title}`}
                                     item={item} 
                                     type={type} 
-                                    onCardClick={onCardClick}
+                                    onCardClick={handleOpenModal}
                                 />
                             ))}
                         </AnimatePresence>
@@ -290,7 +308,7 @@ const MainContent = ({
                             <h3 className="text-xl md:text-2xl text-amber-200 font-serif text-shadow-gold mb-4 border-b-2 border-amber-900/50 pb-2">{category}</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {works.map((work, index) => (
-                                    <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={onCardClick} />
+                                    <WorkCard key={`${category}-${work.title}-${index}`} item={work} onCardClick={handleOpenModal} />
                                 ))}
                             </div>
                         </motion.div>
@@ -303,13 +321,7 @@ const MainContent = ({
     };
     
     const renderChallengeContent = () => {
-        const goBackToHub = () => {
-             setActiveChallenge(null);
-             if (survival.isActive || survival.isGameOver) {
-                 handleStartSurvival(); 
-                 setActiveChallenge(null);
-             }
-        };
+        const goBackToHub = () => setActiveChallenge(null);
 
         if (!activeChallenge) {
             return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
@@ -321,7 +333,7 @@ const MainContent = ({
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
                         <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title">Múltipla Escolha</h2>
-                        <button onClick={() => onGenerateQuiz()} disabled={quiz.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => handleGenerateQuiz()} disabled={quiz.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {quiz.isLoading ? 'Criando...' : 'Gerar Nova Pergunta'}
                         </button>
@@ -330,7 +342,7 @@ const MainContent = ({
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
                                 <p className="text-stone-300 text-lg font-semibold mb-4 text-justify">{quiz.question}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {quiz.options.map((option, index) => <button key={index} onClick={() => onQuizGuess(option)} disabled={!!quiz.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, quiz.answer, quiz.guessedOption, !!quiz.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
+                                    {quiz.options.map((option, index) => <button key={index} onClick={() => handleQuizGuess(option, sounds)} disabled={!!quiz.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, quiz.answer, quiz.guessedOption, !!quiz.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
                                 </div>
                                 {quiz.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-justify">{quiz.feedback}</p>}
                             </div>
@@ -355,7 +367,7 @@ const MainContent = ({
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Desistir e Voltar</button>
                         <SurvivalGame
                             survival={survival}
-                            onAnswer={handleSurvivalAnswer}
+                            onAnswer={(guess) => handleSurvivalAnswer(guess, sounds)}
                             onStart={handleStartSurvival}
                             generateQuestion={generateSurvivalQuestion}
                             getButtonClass={getButtonClass}
@@ -368,7 +380,7 @@ const MainContent = ({
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
                         <h2 className="text-2xl md:text-3xl mb-4 text-amber-300 font-title">Quem Sou Eu?</h2>
-                        <button onClick={() => onGenerateWhoAmI()} disabled={whoAmI.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => handleGenerateWhoAmI()} disabled={whoAmI.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {whoAmI.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
                         </button>
@@ -377,7 +389,7 @@ const MainContent = ({
                             <div className="mt-4 p-4 bg-black/30 rounded-md border border-amber-900/50">
                                 <p className="text-stone-300 text-lg italic font-semibold mb-4 text-center">"{whoAmI.description}"</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {whoAmI.options.map((option, index) => <button key={index} onClick={() => onWhoAmIGuess(option)} disabled={!!whoAmI.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, whoAmI.answer, whoAmI.guessedOption, !!whoAmI.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
+                                    {whoAmI.options.map((option, index) => <button key={index} onClick={() => handleWhoAmIGuess(option, sounds)} disabled={!!whoAmI.feedback} className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, whoAmI.answer, whoAmI.guessedOption, !!whoAmI.feedback)} disabled:cursor-not-allowed`}>{option}</button>)}
                                 </div>
                                 {whoAmI.feedback && <p className="mt-4 font-bold text-lg text-amber-300 text-justify">{whoAmI.feedback}</p>}
                             </div>
@@ -388,7 +400,7 @@ const MainContent = ({
             case 'timeline':
                 const getTimelineItemClass = (itemName) => {
                     if (!timeline.isChecked) return 'bg-gray-800/60 border-amber-800/50';
-                    const userIndex = timelineItems.findIndex(item => item.name === itemName);
+                    const userIndex = timeline.items.findIndex(item => item.name === itemName);
                     if (userIndex < 0 || userIndex >= timeline.correctOrder.length) return 'bg-gray-800/60 border-amber-800/50';
                     
                     return timeline.correctOrder[userIndex] === itemName 
@@ -403,11 +415,11 @@ const MainContent = ({
                         <p className="text-stone-400 mb-4">Arraste os compositores para ordená-los do mais antigo para o mais recente (por ano de nascimento).</p>
                         
                         <div className="flex flex-col md:flex-row gap-4">
-                            <button onClick={onGenerateTimeline} disabled={timeline.isLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
+                            <button onClick={handleGenerateTimeline} disabled={timeline.isLoading} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait">
                                 <Sparkles size={18} />
                                 {timeline.isLoading ? 'Gerando...' : 'Gerar Novo Desafio'}
                             </button>
-                            <button onClick={() => onCheckTimeline(timelineItems)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button onClick={() => handleCheckTimeline(timeline.items, sounds)} disabled={timeline.isLoading || timeline.isChecked || timeline.items.length === 0} className="flex-1 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600/20 text-blue-200 border border-blue-500 rounded-md hover:bg-blue-600/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                                 Verificar Ordem
                             </button>
                         </div>
@@ -416,8 +428,8 @@ const MainContent = ({
 
                         {timeline.items.length > 0 && !timeline.isLoading && (
                             <div className="mt-6">
-                                <Reorder.Group axis="y" values={timelineItems} onReorder={setTimelineItems} className="space-y-3">
-                                    {timelineItems.map(item => (
+                                <Reorder.Group axis="y" values={timeline.items} onReorder={setTimelineItems} className="space-y-3">
+                                    {timeline.items.map(item => (
                                         <Reorder.Item key={item.name} value={item} className={`p-4 rounded-md shadow-md cursor-grab active:cursor-grabbing border ${getTimelineItemClass(item.name)} transition-colors duration-300`}>
                                             <p className="font-bold text-lg text-amber-200">{item.name}</p>
                                             <p className="text-sm text-stone-300">{timeline.isChecked ? item.lifespan : '???'}</p>
@@ -439,7 +451,7 @@ const MainContent = ({
                         
                         <p className="text-stone-400 mb-4">Leia a descrição e escolha o período musical correto.</p>
 
-                        <button onClick={() => onGenerateFromWhichPeriod()} disabled={fromWhichPeriod.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
+                        <button onClick={() => handleGenerateFromWhichPeriod()} disabled={fromWhichPeriod.isLoading} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2 bg-amber-600/20 text-amber-200 border border-amber-500 rounded-md hover:bg-amber-600/40 transition-all disabled:opacity-50 disabled:cursor-wait mb-4">
                             <Sparkles size={18} />
                             {fromWhichPeriod.isLoading ? 'Criando...' : 'Gerar Novo Desafio'}
                         </button>
@@ -453,7 +465,7 @@ const MainContent = ({
                                     {fromWhichPeriod.options.map((option, index) => (
                                         <button 
                                             key={index} 
-                                            onClick={() => onFromWhichPeriodGuess(option)} 
+                                            onClick={() => handleFromWhichPeriodGuess(option, sounds)} 
                                             disabled={!!fromWhichPeriod.feedback}
                                             className={`px-3 py-2 text-stone-200 rounded-md text-left transition-all duration-300 border ${getButtonClass(option, fromWhichPeriod.answer, fromWhichPeriod.guessedOption, !!fromWhichPeriod.feedback)} disabled:cursor-not-allowed`}
                                         >
@@ -487,7 +499,7 @@ const MainContent = ({
                 );
             
             case 'battle':
-                if (!user) {
+                if (!currentUser) {
                     return (
                         <div className="text-center p-6 bg-black/20 rounded-lg max-w-4xl mx-auto">
                             <h2 className="text-2xl text-amber-300 mb-4">Modo Batalha</h2>
@@ -501,7 +513,7 @@ const MainContent = ({
                 return (
                     <motion.div initial={{opacity: 0}} animate={{opacity: 1}} className="bg-black/20 backdrop-blur-sm p-4 md:p-6 rounded-lg border border-amber-900/50 shadow-lg max-w-4xl mx-auto">
                         <button onClick={goBackToHub} className="flex items-center gap-2 text-amber-300 hover:text-amber-100 mb-4 text-sm"><ArrowLeft size={16} /> Voltar ao Hub</button>
-                        <BattleMode user={user} socket={socket} period={period} onBack={goBackToHub} />
+                        <BattleMode user={currentUser} socket={socket} period={period} onBack={goBackToHub} />
                     </motion.div>
                 );
             default: return <ChallengeHub setActiveChallenge={setActiveChallenge} />;
@@ -509,6 +521,8 @@ const MainContent = ({
     }
     
     const renderContent = () => {
+        if (!period) return <LoadingSpinner />;
+        
         if (activeTab === 'quiz') {
             return renderChallengeContent();
         }
@@ -596,7 +610,7 @@ const MainContent = ({
             <main className="flex-1 p-4 sm:p-6 overflow-y-auto scrollbar-thin">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={`${period.id}-${activeTab}`}
+                        key={`${period?.id}-${activeTab}`}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import io from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu } from 'lucide-react';
 
-import { musicHistoryData } from './data/musicHistoryData';
-import { useMusicApp } from './hooks/useMusicApp';
+// Os únicos imports do store necessários aqui são para o modal e o toast,
+// que são renderizados no nível mais alto do layout.
+import { useMusicAppStore } from './store/musicAppStore';
 
 import MainContent from './components/MainContent';
 import DetailModal from './components/DetailModal';
 import Sidebar from './components/Sidebar';
 import LoadingScreen from './components/LoadingScreen';
 import AchievementToast from './components/AchievementToast';
-
 import CreateQuiz from './components/quiz/CreateQuiz';
 import QuizLobby from './components/quiz/QuizLobby';
 import JoinQuiz from './components/quiz/JoinQuiz';
@@ -25,30 +25,34 @@ const backendUrl = 'http://localhost:5001';
 const socket = io(backendUrl);
 
 const AppLayout = () => {
-    const musicAppProps = useMusicApp();
+    // AppLayout agora só se preocupa com o estado do layout e com os elementos globais.
+    const modalContent = useMusicAppStore((state) => state.modalContent);
+    const lastAchievement = useMusicAppStore((state) => state.lastAchievement);
+    const handleCloseModal = useMusicAppStore((state) => state.handleCloseModal);
+    const setLastAchievement = useMusicAppStore((state) => state.setLastAchievement);
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false); // 1. Estado de interação volta para o AppLayout
+    const [hasInteracted, setHasInteracted] = useState(false);
+    
+    // Os refs de áudio permanecem aqui, pois são um recurso global da página.
+    const correctSoundRef = useRef(null);
+    const incorrectSoundRef = useRef(null);
+    const sounds = {
+        correct: () => correctSoundRef.current?.play().catch(console.error),
+        incorrect: () => incorrectSoundRef.current?.play().catch(console.error)
+    };
 
     return (
-        // 2. O onClick é adicionado ao container principal
         <div 
             className="h-screen w-screen text-stone-200 font-sans md:flex overflow-hidden" 
             id="app-container"
             onClick={() => { if (!hasInteracted) setHasInteracted(true); }}
         >
+            {/* Note como o Sidebar agora recebe muito menos props */}
             <Sidebar
-                periods={musicHistoryData}
-                selectedPeriod={musicAppProps.selectedPeriod}
-                onSelectPeriod={musicAppProps.handleSelectPeriod}
-                user={musicAppProps.currentUser}
-                score={musicAppProps.score}
-                achievements={musicAppProps.achievements}
-                stats={musicAppProps.stats}
-                onCustomLogin={musicAppProps.handleCustomLogin} 
-                onLogout={musicAppProps.handleLogout}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
-                hasInteracted={hasInteracted} // 3. Passa o estado como prop
+                hasInteracted={hasInteracted}
             />
 
             {isSidebarOpen && <div onClick={(e) => { e.stopPropagation(); setIsSidebarOpen(false); }} className="md:hidden fixed inset-0 bg-black/60 z-30" />}
@@ -65,47 +69,21 @@ const AppLayout = () => {
                 </header>
 
                 <div className="flex-1 flex flex-col overflow-y-auto scrollbar-custom">
-                    {musicAppProps.selectedPeriod && (
-                        <MainContent 
-                            period={musicAppProps.selectedPeriod} 
-                            onCardClick={musicAppProps.handleOpenModal}
-                            activeChallenge={musicAppProps.activeChallenge}
-                            setActiveChallenge={musicAppProps.setActiveChallenge}
-                            quiz={musicAppProps.quiz}
-                            onGenerateQuiz={musicAppProps.handleGenerateQuiz}
-                            onQuizGuess={musicAppProps.handleQuizGuess}
-                            whoAmI={musicAppProps.whoAmI}
-                            onGenerateWhoAmI={musicAppProps.handleGenerateWhoAmI}
-                            onWhoAmIGuess={musicAppProps.handleWhoAmIGuess}
-                            timeline={musicAppProps.timeline}
-                            onGenerateTimeline={musicAppProps.handleGenerateTimeline}
-                            onCheckTimeline={musicAppProps.handleCheckTimeline}
-                            fromWhichPeriod={musicAppProps.fromWhichPeriod}
-                            onGenerateFromWhichPeriod={musicAppProps.handleGenerateFromWhichPeriod}
-                            onFromWhichPeriodGuess={musicAppProps.handleFromWhichPeriodGuess}
-                            leaderboard={musicAppProps.leaderboard}
-                            user={musicAppProps.currentUser}
-                            socket={socket}
-                            survival={musicAppProps.survival}
-                            handleStartSurvival={musicAppProps.handleStartSurvival}
-                            generateSurvivalQuestion={musicAppProps.generateSurvivalQuestion}
-                            handleSurvivalAnswer={musicAppProps.handleSurvivalAnswer}
-                        />
-                    )}
+                    {/* MainContent agora também recebe muito menos props */}
+                    <MainContent socket={socket} sounds={sounds} />
                 </div>
             </div>
 
-            <DetailModal content={musicAppProps.modalContent} onClose={musicAppProps.handleCloseModal} />
+            <DetailModal content={modalContent} onClose={handleCloseModal} />
             <AchievementToast 
-                achievement={musicAppProps.lastAchievement} 
-                onDismiss={() => musicAppProps.setLastAchievement(null)} 
+                achievement={lastAchievement} 
+                onDismiss={() => setLastAchievement(null)} 
             />
-             <audio ref={musicAppProps.correctSoundRef} src="assets/audio/correct.mp3" preload="auto" />
-             <audio ref={musicAppProps.incorrectSoundRef} src="assets/audio/incorrect.mp3" preload="auto" />
+            <audio ref={correctSoundRef} src="assets/audio/correct.mp3" preload="auto" />
+            <audio ref={incorrectSoundRef} src="assets-incorrect.mp3" preload="auto" />
         </div>
     );
 };
-
 
 export default function App() {
     const [isLoading, setIsLoading] = useState(true);
