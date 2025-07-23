@@ -1,0 +1,52 @@
+import { Feather } from 'lucide-react';
+
+export const romanticoData = {
+ id: 'romantico',
+    name: 'Música Romântica',
+    years: 'c. 1800 - 1910',
+    icon: Feather,
+    referenceSong: 'assets/audio/periodo_romantico/Ride-of-the-Valkyries.MP3',
+      referenceSongTitle: 'Wagner - A Cavalgada das Valquírias',
+    overviewImages: ['https://placehold.co/600x400/4a2a3a/a38b71?text=Pintura+Romântica+(Friedrich)', 'https://placehold.co/600x400/4a2a3a/a38b71?text=Concerto+no+Século+XIX'],
+    historicalContext: "O Romantismo foi uma reação ao racionalismo do Iluminismo, valorizando a emoção, o individualismo, a imaginação e a natureza. A Revolução Francesa e as Guerras Napoleónicas transformaram a sociedade, e o artista emergiu como um herói visionário, um indivíduo de sensibilidade única. O nacionalismo tornou-se uma força poderosa, levando os compositores a incorporar melodias e ritmos folclóricos nas suas obras. O interesse pelo exótico, pelo sobrenatural e pelo passado medieval também foi uma marca do período.",
+    description: 'A música romântica expandiu enormemente a paleta expressiva. A melodia tornou-se mais lírica e apaixonada, a harmonia mais rica e cromática, e os contrastes dinâmicos mais extremos. A orquestra cresceu em tamanho e cor, com a secção dos metais a ganhar um novo protagonismo. Formas clássicas como a sinfonia foram expandidas e adaptadas, enquanto novos géneros, como o Lied, a peça de caráter para piano e o poema sinfónico, surgiram para expressar a subjetividade e a narrativa.',
+    composers: [
+      { name: 'Ludwig van Beethoven', lifespan: '1770-1827', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Beethoven', bio: 'A figura de ponte entre o Classicismo e o Romantismo. As suas obras tardias, como a Nona Sinfonia, expandiram as formas clássicas a um nível de expressão pessoal e monumentalidade sem precedentes.', majorWorks: ['Sinfonia n.º 3 "Eroica"', 'Sinfonia n.º 5', 'Sinfonia n.º 9 "Coral"', 'Sonata "Ao Luar"'] },
+      { name: 'Franz Schubert', lifespan: '1797-1828', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Schubert', bio: 'Mestre supremo do Lied (canção de arte alemã), compôs mais de 600 canções, elevando o género a um alto nível de sofisticação poética e musical. A sua música é conhecida pelo seu lirismo inesgotável.', majorWorks: ['Gretchen am Spinnrade', 'Erlkönig', 'Sinfonia n.º 8 "Inacabada"', 'Quinteto "A Truta"'] },
+      { name: 'Hector Berlioz', lifespan: '1803-1869', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Berlioz', bio: 'Compositor francês conhecido pela sua orquestração inovadora e pelas suas obras programáticas. A "Sinfonia Fantástica" é um exemplo paradigmático da sua imaginação e do uso da "idée fixe".', majorWorks: ['Sinfonia Fantástica', 'Grande Messe des morts (Réquiem)', 'Les Troyens'] },
+      { name: 'Frédéric Chopin', lifespan: '1810-1849', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Chopin', bio: 'Poeta do piano, o compositor polaco-francês dedicou-se quase exclusivamente ao instrumento. A sua música é conhecida pela delicadeza, lirismo, harmonias sofisticadas e pelo uso expressivo do rubato.', majorWorks: ['Noturnos', 'Polonaises', 'Estudos Op. 10 & 25', 'Sonata para Piano n.º 2'] },
+      { name: 'Robert Schumann', lifespan: '1810-1856', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Schumann', bio: 'Compositor alemão que encarnou o ideal romântico. A sua música, especialmente as suas peças para piano e os seus ciclos de canções, é profundamente pessoal e muitas vezes inspirada pela literatura.', majorWorks: ['Carnaval', 'Dichterliebe', 'Sinfonia n.º 4'] },
+      { name: 'Franz Liszt', lifespan: '1811-1886', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Liszt', bio: 'Um dos maiores virtuosos do piano de todos os tempos. Como compositor, foi um inovador, criando o poema sinfónico e desenvolvendo a técnica da transformação temática.', majorWorks: ['Sonata para Piano em Si menor', 'Les Préludes', 'Rapsódias Húngaras'] },
+      { name: 'Richard Wagner', lifespan: '1813-1883', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Wagner', bio: 'Revolucionou a ópera com o seu conceito de "drama musical" (Gesamtkunstwerk), uma obra de arte total. Usou a técnica do leitmotiv e uma harmonia cromática que levou a tonalidade ao seu limite.', majorWorks: ['O Anel do Nibelungo', 'Tristão e Isolda', 'Os Mestres Cantores de Nuremberga'] },
+      { name: 'Giuseppe Verdi', lifespan: '1813-1901', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Verdi', bio: 'O principal compositor de ópera italiana do século XIX. As suas óperas são conhecidas pelas suas melodias cativantes, paixão dramática e profundidade psicológica dos personagens.', majorWorks: ['Rigoletto', 'La Traviata', 'Aida', 'Otello'] },
+      { name: 'Johannes Brahms', lifespan: '1833-1897', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Brahms', bio: 'Visto como o sucessor de Beethoven, Brahms combinou a expressividade romântica com as formas e o rigor contrapontístico clássicos. É um mestre da "variação em desenvolvimento".', majorWorks: ['Sinfonias n.º 1 a 4', 'Um Réquiem Alemão', 'Concerto para Violino'] },
+      { name: 'Pyotr Ilyich Tchaikovsky', lifespan: '1840-1893', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Tchaikovsky', bio: 'O mais famoso compositor russo, conhecido pelas suas melodias intensamente emotivas e pela sua orquestração colorida. Destacou-se nas sinfonias, concertos e, especialmente, nos bailados.', majorWorks: ['Sinfonia n.º 6 "Patética"', 'O Lago dos Cisnes', 'Concerto para Piano n.º 1'] },
+    ],
+    instruments: [
+        { name: 'Piano Moderno', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Piano', description: 'Com a estrutura de ferro fundido, o cruzamento de cordas e os martelos de feltro, o piano tornou-se o instrumento central do Romantismo, capaz de grande poder e delicadeza, ideal para o virtuosismo e a expressão íntima.' },
+        { name: 'Metais com Válvulas', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Trompa+com+Válvulas', description: 'A invenção das válvulas para trompas e trompetes permitiu-lhes tocar todas as notas cromáticas com facilidade, transformando a secção de metais da orquestra num coro poderoso e flexível.' },
+        { name: 'Tuba', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Tuba', description: 'Adicionada à orquestra para fornecer uma base sólida para a secção de metais, que se expandiu significativamente no período, especialmente nas obras de Wagner e Berlioz.' },
+    ],
+    genresAndForms: [
+        { name: 'Lied', description: 'A canção de arte alemã para voz e piano. O piano deixou de ser um mero acompanhante para se tornar um parceiro igual na expressão do poema. Schubert é o seu mestre incontestado.' },
+        { name: 'Peça de Caráter', description: 'Peça curta para piano que evoca um estado de espírito, uma cena ou uma personagem. Exemplos incluem os Noturnos de Chopin, os Intermezzi de Brahms e as Cenas da Floresta de Schumann.' },
+        { name: 'Poema Sinfónico', description: 'Obra orquestral de um só movimento, de forma livre, baseada num programa extramusical (um poema, uma pintura, uma ideia). Foi uma invenção de Franz Liszt.' },
+        { name: 'Sinfonia Programática', description: 'Uma sinfonia com um enredo ou programa explícito, como a "Sinfonia Fantástica" de Berlioz, que narra os sonhos de um artista sob o efeito do ópio.' },
+        { name: 'Drama Musical', description: 'O termo de Wagner para as suas óperas tardias. Buscava uma fusão total entre música, poesia e cena, com uma "melodia infinita" e uma complexa teia de leitmotivs na orquestra.' },
+    ],
+    stylesAndTechniques: [
+        { name: 'Cromatismo', description: 'Uso intensivo de notas e acordes estranhos à tonalidade principal. A harmonia tornou-se mais complexa e ambígua, especialmente em Wagner, levando a tonalidade aos seus limites.' },
+        { name: 'Rubato', description: 'Flexibilidade rítmica na execução. O intérprete acelera ou abranda ligeiramente o tempo para fins expressivos, uma técnica particularmente associada à música de Chopin.' },
+        { name: 'Nacionalismo', description: 'A incorporação de elementos musicais nacionais, como melodias folclóricas, ritmos de dança e temas de lendas nacionais, para afirmar uma identidade cultural. Visível em compositores como Tchaikovsky, Dvořák e Grieg.' },
+        { name: 'Leitmotiv', description: 'Técnica desenvolvida por Wagner, onde um motivo musical recorrente está associado a uma pessoa, objeto ou ideia específica na narrativa do drama musical.' },
+    ],
+    ensembles: [
+        { name: 'Orquestra Romântica', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Orquestra+Romântica', description: 'A orquestra expandiu-se enormemente em tamanho e variedade de timbres. A secção de metais tornou-se completa, e novos instrumentos como o piccolo, o contrafagote e a harpa foram adicionados regularmente.' },
+        { name: 'O Virtuoso', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Paganini', description: 'O intérprete com uma técnica transcendente tornou-se uma figura de culto. Violinistas como Paganini e pianistas como Liszt cativavam o público com as suas proezas, e a música era escrita para exibir esse virtuosismo.' },
+    ],
+    works: [
+        { title: 'Sinfonia Fantástica', composer: 'Hector Berlioz', year: '1830', analysis: 'Uma obra revolucionária que narra a história de um amor não correspondido através de cinco movimentos. A sua orquestração inovadora e o uso de uma "idée fixe" (um tema recorrente para a amada) fizeram dela um manifesto do Romantismo musical.', youtubeId: '5HgqPpjIH6s' },
+        { title: 'Liebestraum n.º 3', composer: 'Franz Liszt', year: 'c. 1850', analysis: 'Originalmente uma canção, esta peça para piano é um exemplo perfeito do lirismo romântico e do virtuosismo de Liszt. A melodia apaixonada é acompanhada por arpejos fluidos, exigindo grande sensibilidade e técnica do intérprete.', youtubeId: 'KpO_E8I-Tfg' },
+        { title: 'A Cavalgada das Valquírias', composer: 'Richard Wagner', year: '1856', analysis: 'A abertura do Ato III da ópera "A Valquíria". É uma das peças orquestrais mais famosas, retratando as Valquírias a cavalo com um tema poderoso nos metais e figuras redemoinhantes nas cordas. Um exemplo perfeito do uso de leitmotiv e da grandiosidade orquestral de Wagner.', youtubeId: 'GGU1P6lBW6Q' },
+    ]
+};

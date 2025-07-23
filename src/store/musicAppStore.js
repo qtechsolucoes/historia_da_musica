@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { googleLogout } from '@react-oauth/google';
-import { musicHistoryData } from '../data/musicHistoryData';
+import { musicHistoryData } from '../data/index.js';
 
 const backendUrl = 'http://localhost:5001';
 

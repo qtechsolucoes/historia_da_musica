@@ -1,0 +1,50 @@
+import { Atom } from 'lucide-react';
+
+export const modernoData = {
+ id: 'moderno',
+    name: 'Música Moderna e Contemporânea',
+    years: 'c. 1900 - Hoje',
+    icon: Atom,
+     referenceSong: 'assets/audio/periodo_moderno/Igor Stravinsky. The Rite of Spring (Augurs of Spring).MP3',
+     referenceSongTitle: 'Stravinsky - A Sagração da Primavera',
+    overviewImages: ['https://placehold.co/600x400/2a3a4a/a38b71?text=Pintura+Cubista+(Picasso)', 'https://placehold.co/600x400/2a3a4a/a38b71?text=Estúdio+de+Música+Eletrónica'],
+    historicalContext: "O século XX foi marcado por uma aceleração vertiginosa da história: duas Guerras Mundiais, a Guerra Fria, a descolonização, a globalização e uma revolução tecnológica sem precedentes (rádio, gravação, computadores). A arte refletiu esta fragmentação e ansiedade, questionando todas as convenções. A psicanálise de Freud revelou o subconsciente, e a física de Einstein abalou as noções de tempo e espaço. Os compositores abandonaram a prática comum da tonalidade, que havia durado séculos, em busca de novas linguagens para expressar um novo mundo.",
+    description: 'A música do século XX é um mosaico de estilos e técnicas radicalmente diferentes. Não há uma linguagem única, mas uma pluralidade de caminhos. Movimentos como o Impressionismo, o Expressionismo, o Neoclassicismo e o Serialismo procuraram novas formas de organizar o som. Após a Segunda Guerra Mundial, a vanguarda explorou a música eletrónica, a música aleatória e a textura sonora. Mais recentemente, o Minimalismo e o Pós-Modernismo revisitaram a tonalidade e a história de formas novas e inesperadas.',
+    composers: [
+      { name: 'Claude Debussy', lifespan: '1862-1918', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Debussy', bio: 'Pioneiro do Impressionismo musical, criou paisagens sonoras etéreas, focando no timbre e na cor harmónica. Usou escalas exóticas (tons inteiros, pentatónicas) e acordes que flutuam livremente, libertando a harmonia da sua função tradicional.', majorWorks: ['Prélude à l\'après-midi d\'un faune', 'La Mer', 'Clair de Lune'] },
+      { name: 'Arnold Schoenberg', lifespan: '1874-1951', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Schoenberg', bio: 'Figura central da Segunda Escola de Viena. Liderou a música em direção à atonalidade e, mais tarde, desenvolveu o dodecafonismo (técnica dos doze tons), um método para organizar a música atonal de forma sistemática.', majorWorks: ['Pierrot Lunaire', 'Verklärte Nacht', 'Suíte para Piano, Op. 25'] },
+      { name: 'Igor Stravinsky', lifespan: '1882-1971', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Stravinsky', bio: 'Um dos compositores mais influentes do século. A sua carreira atravessou múltiplos estilos, do "primitivismo" rítmico e brutal de "A Sagração da Primavera" ao Neoclassicismo e, mais tarde, ao Serialismo.', majorWorks: ['A Sagração da Primavera', 'O Pássaro de Fogo', 'Sinfonia dos Salmos'] },
+      { name: 'Béla Bartók', lifespan: '1881-1945', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Bartók', bio: 'Compositor húngaro e um dos fundadores da etnomusicologia. Integrou elementos da música folclórica do Leste Europeu com técnicas contrapontísticas rigorosas e harmonias dissonantes.', majorWorks: ['Concerto para Orquestra', 'Música para Cordas, Percussão e Celesta', 'Mikrokosmos'] },
+      { name: 'Anton Webern', lifespan: '1883-1945', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Webern', bio: 'Aluno de Schoenberg, levou o dodecafonismo às suas consequências mais radicais. A sua música é conhecida pela sua extrema concisão, texturas esparsas e uma organização quase matemática (serialismo total).', majorWorks: ['Sinfonia, Op. 21', 'Variações para Piano, Op. 27'] },
+      { name: 'Pierre Boulez', lifespan: '1925-2016', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Boulez', bio: 'Figura central da vanguarda do pós-guerra. Compositor, maestro e teórico, foi um proponente do serialismo integral, aplicando os princípios seriais a todos os parâmetros musicais (duração, dinâmica, timbre).', majorWorks: ['Le Marteau sans maître', 'Pli selon pli'] },
+      { name: 'John Cage', lifespan: '1912-1992', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Cage', bio: 'Compositor americano pioneiro da música aleatória, da música eletrónica e do uso não convencional dos instrumentos (como o piano preparado). Desafiou as noções fundamentais de música, som e silêncio.', majorWorks: ['4\'33"', 'Sonatas e Interlúdios para Piano Preparado'] },
+      { name: 'Philip Glass', lifespan: 'n. 1937', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Glass', bio: 'Um dos mais proeminentes compositores do minimalismo. A sua música baseia-se na repetição de pequenas células rítmicas e melódicas que evoluem lentamente ao longo do tempo, criando um efeito hipnótico.', majorWorks: ['Einstein on the Beach', 'Glassworks', 'Metamorphosis'] },
+    ],
+    instruments: [
+        { name: 'Sintetizador', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Sintetizador', description: 'Instrumento eletrónico capaz de criar uma gama virtualmente infinita de sons, desde a imitação de instrumentos acústicos até timbres completamente novos. Revolucionou a produção musical.' },
+        { name: 'Piano Preparado', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Piano+Preparado', description: 'Invenção de John Cage. Consiste em inserir objetos (parafusos, borrachas, pedaços de madeira) entre as cordas de um piano para alterar o seu som, transformando-o num conjunto de percussão de timbres variados.' },
+        { name: 'Fita Magnética', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Fita+Magnética', description: 'Permitiu aos compositores da "musique concrète" gravar sons do mundo real e manipulá-los em estúdio (cortar, colar, inverter, alterar a velocidade), criando composições diretamente na fita.' },
+    ],
+    genresAndForms: [
+        { name: 'Impressionismo', description: 'Estilo liderado por Debussy, que valoriza o timbre, a cor e a atmosfera em detrimento da forma e do desenvolvimento temático. Usa harmonias não funcionais e escalas exóticas.' },
+        { name: 'Expressionismo', description: 'Movimento que busca expressar emoções intensas e subjetivas, muitas vezes explorando o lado sombrio da psique humana. Na música, está associado à atonalidade e à dissonância extrema de Schoenberg.' },
+        { name: 'Dodecafonismo (Serialismo)', description: 'Método de composição criado por Schoenberg para dar estrutura à música atonal. Baseia-se numa "série" que contém todas as doze notas da escala cromática, sem repetição, que serve de base para toda a peça.' },
+        { name: 'Neoclassicismo', description: 'Uma reação contra a emotividade romântica e a ausência de forma do expressionismo. Os compositores (como Stravinsky) revisitaram as formas e os géneros do Barroco e do Classicismo com uma linguagem harmónica e rítmica moderna.' },
+        { name: 'Música Aleatória (Indeterminação)', description: 'Música em que alguns elementos são deixados ao acaso, seja na composição (usando dados, mapas astrais, etc.) ou na execução (dando liberdade ao intérprete). John Cage foi o seu principal proponente.' },
+        { name: 'Minimalismo', description: 'Estilo que emergiu nos anos 60, baseado na repetição de pequenas células musicais que se transformam gradualmente. Cria texturas hipnóticas e muitas vezes regressa a uma harmonia consonante.' },
+    ],
+    stylesAndTechniques: [
+        { name: 'Atonalidade', description: 'Música que evita estabelecer um centro tonal. Todas as doze notas da escala cromática são tratadas com igual importância, criando uma sensação de tensão e ausência de repouso harmónico.' },
+        { name: 'Sprechstimme', description: 'Técnica vocal inventada por Schoenberg, a meio caminho entre o canto e a fala. O intérprete segue o ritmo notado, mas apenas aproxima as alturas, deslizando entre elas. Usada de forma icónica em "Pierrot Lunaire".' },
+        { name: 'Klangfarbenmelodie', description: 'A "melodia de timbres". Uma técnica onde uma linha melódica é distribuída por diferentes instrumentos, de modo que a cor do timbre se torna um elemento estrutural tão importante quanto a altura ou o ritmo.' },
+    ],
+    ensembles: [
+        { name: 'Orquestra Expandida', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Orquestra+Moderna', description: 'A orquestra sinfónica atingiu o seu tamanho máximo, com secções de metais e percussão enormes, como em "A Sagração da Primavera" de Stravinsky ou nas sinfonias de Mahler.' },
+        { name: 'Conjunto de Música de Câmara', image: 'https://placehold.co/200x200/5a3a22/FFFFFF?text=Ensemble+Moderno', description: 'Muitos compositores preferiram escrever para conjuntos de câmara com instrumentações únicas e variadas, em vez da orquestra padrão, para explorar combinações de timbres mais específicas, como em "Pierrot Lunaire".' },
+    ],
+    works: [
+        { title: 'Prélude à l\'après-midi d\'un faune', composer: 'Claude Debussy', year: '1894', analysis: 'Considerada um marco do início do Modernismo. A obra evoca a atmosfera de um poema de Mallarmé através de uma orquestração subtil, harmonias ambíguas e uma melodia sinuosa na flauta que parece flutuar sem uma direção clara.', youtubeId: 'bYyK922PsUw' },
+        { title: 'A Sagração da Primavera', composer: 'Igor Stravinsky', year: '1913', analysis: 'Um balé que causou um dos maiores escândalos da história da música. A sua força reside nos ritmos pulsantes, irregulares e brutais, nas dissonâncias agressivas e na orquestração percussiva, retratando um ritual pagão primitivo.', youtubeId: 'EkwqPJZe8ms' },
+        { title: 'Pierrot Lunaire', composer: 'Arnold Schoenberg', year: '1912', analysis: 'Um ciclo de canções para voz e conjunto de câmara. É uma obra central do expressionismo atonal, famosa pelo uso da técnica do "Sprechstimme" para expressar a angústia e a alienação do texto.', youtubeId: 'eH7_16-y9W0' },
+    ]
+};

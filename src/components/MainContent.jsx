@@ -5,7 +5,7 @@ import { BrainCircuit, Sparkles, Crown, ArrowLeft, Clock, HelpCircle, ListChecks
 
 // 1. Importar o store e os dados necessários
 import { useMusicAppStore } from '../store/musicAppStore';
-import { musicHistoryData } from '../data/musicHistoryData';
+import { musicHistoryData } from '../data/index.js';
 
 import InfoCard from './InfoCard';
 import WorkCard from './WorkCard';
@@ -628,4 +628,4 @@ const MainContent = ({ socket, sounds }) => {
     );
 };
 
-export default MainContent;
+export default MainContent; 

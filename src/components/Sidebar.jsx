@@ -3,7 +3,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { Play, Pause, Square, LogOut, Award, Star, BarChart2, ChevronDown, ChevronUp, UserPlus, BookOpen, Guitar, Music4, Crown, X } from 'lucide-react';
 
 import { useMusicAppStore } from '../store/musicAppStore';
-import { musicHistoryData } from '../data/musicHistoryData';
+import { musicHistoryData } from '../data/index.js';
 
 const getPlayerLevel = (score) => {
     if (score >= 10000) return { name: 'Kapellmeister', icon: <Crown size={20} className="text-yellow-400" />, color: 'text-yellow-400' };
