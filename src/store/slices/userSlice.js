@@ -1,11 +1,7 @@
-// src/store/slices/userSlice.js
-
 import { googleLogout } from '@react-oauth/google';
+// <-- MUDANÇA: Importa o nosso novo serviço de API
+import apiService from '../../services/api';
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
-
-// A "slice" é uma função que cria uma parte do nosso estado global.
-// Ela recebe 'set' e 'get' como argumentos, assim como o store principal.
 export const createUserSlice = (set, get) => ({
     currentUser: null,
     authToken: null,
@@ -33,11 +29,10 @@ export const createUserSlice = (set, get) => ({
                 localStorage.clear();
             }
         }
-        // Carregar o leaderboard
+        
         try {
-            const response = await fetch(`${backendUrl}/api/leaderboard`);
-            if (!response.ok) throw new Error("Falha ao buscar ranking");
-            const data = await response.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const data = await apiService.getLeaderboard();
             set({ leaderboard: data });
         } catch (error) {
             console.error("Erro ao carregar o ranking:", error);
@@ -46,14 +41,8 @@ export const createUserSlice = (set, get) => ({
 
     login: async (profile) => {
         try {
-            const backendResponse = await fetch(`${backendUrl}/api/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile }),
-            });
-            if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
-            
-            const { user, token } = await backendResponse.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const { user, token } = await apiService.loginUser(profile);
             
             localStorage.setItem('user', JSON.stringify(user));
             localStorage.setItem('authToken', token);
@@ -67,6 +56,7 @@ export const createUserSlice = (set, get) => ({
             });
         } catch (error) {
             console.error("Erro no login:", error);
+            // Aqui você pode adicionar uma notificação de erro para o usuário
         }
     },
 
@@ -78,24 +68,15 @@ export const createUserSlice = (set, get) => ({
     },
 
     checkAndAwardAchievement: async (achievement) => {
-        const { currentUser, achievements, authToken, setLastAchievement } = get();
+        const { currentUser, achievements, setLastAchievement } = get();
         if (currentUser && !achievements.find(a => a.name === achievement.name)) {
             try {
-                const response = await fetch(`${backendUrl}/api/achievements`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ achievement }),
-                });
-                if (response.ok) {
-                    const updatedUser = await response.json();
-                    if (updatedUser && updatedUser.achievements) {
-                        set({ achievements: updatedUser.achievements });
-                        setLastAchievement(achievement); // Chama a ação do uiSlice
-                        localStorage.setItem('user', JSON.stringify(updatedUser));
-                    }
+                // <-- MUDANÇA: Usa a função do serviço de API
+                const updatedUser = await apiService.addUserAchievement(achievement);
+                if (updatedUser && updatedUser.achievements) {
+                    set({ achievements: updatedUser.achievements });
+                    setLastAchievement(achievement); // Chama a ação do uiSlice
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
                 }
             } catch (error) {
                 console.error("Erro ao salvar conquista:", error);
@@ -108,20 +89,12 @@ export const createUserSlice = (set, get) => ({
         if (!authToken) return;
 
         try {
-            const response = await fetch(`${backendUrl}/api/score`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ score: newScore, statsUpdate }),
-            });
-            const updatedUser = await response.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const updatedUser = await apiService.updateUserScoreAndStats(newScore, statsUpdate);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             
             // Atualiza o placar após a pontuação
-            const leaderboardResponse = await fetch(`${backendUrl}/api/leaderboard`);
-            const updatedLeaderboard = await leaderboardResponse.json();
+            const updatedLeaderboard = await apiService.getLeaderboard();
             set({ leaderboard: updatedLeaderboard });
 
         } catch (error) {

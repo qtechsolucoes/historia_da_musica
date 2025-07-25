@@ -1,9 +1,8 @@
 import { musicHistoryData } from '../../data/index.js';
-
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+// <-- MUDANÇA: Importa o nosso novo serviço de API
+import apiService from '../../services/api';
 
 // --- Funções Auxiliares dos Desafios ---
-
 const romanToDecimal = (roman) => {
     const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
     let result = 0;
@@ -60,7 +59,6 @@ export const createChallengesSlice = (set, get) => ({
         isLoading: false,
     },
 
-    // Ações de resposta agora chamam a ação centralizada do userSlice
     handleCorrectAnswer: (playCorrectSound) => {
         playCorrectSound();
         const { score, stats, selectedPeriodId, updateScoreAndStats, checkAndAwardAchievement } = get();
@@ -79,7 +77,6 @@ export const createChallengesSlice = (set, get) => ({
 
         updateScoreAndStats(newScore, { correctAnswers: 1, quizzesCompleted: 1 });
         
-        // Lógica de conquista permanece aqui por enquanto, mas poderia ser movida
         const currentPeriodCorrectAnswers = newStats.periodsVisited[selectedPeriodId];
         if (selectedPeriodId === 'medieval' && currentPeriodCorrectAnswers >= 10) {
              const MESTRE_MEDIEVAL = { name: "Mestre Medieval", description: "Acerte 10 perguntas do período Medieval." };
@@ -95,7 +92,6 @@ export const createChallengesSlice = (set, get) => ({
         updateScoreAndStats(score, { incorrectAnswers: 1 });
     },
 
-    // --- AÇÕES DOS DESAFIOS ---
     handleGenerateQuiz: async (returnOnly = false) => {
         const stateUpdater = (newState) => returnOnly ? {} : set(prev => ({ quiz: { ...prev.quiz, ...newState } }));
         stateUpdater({ isLoading: true, feedback: '', guessedOption: null });
@@ -114,13 +110,8 @@ export const createChallengesSlice = (set, get) => ({
         const prompt = createQuestionPrompt(randomComposer.name, targetPeriod.name);
 
         try {
-            const response = await fetch(`${backendUrl}/api/gemini`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt })
-            });
-            if (!response.ok) throw new Error("Falha ao comunicar com o servidor.");
-            const result = await response.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const result = await apiService.generateGeminiContent(prompt);
             const text = result.candidates[0]?.content?.parts[0]?.text;
 
             const lines = text.split('\n');
@@ -172,9 +163,8 @@ export const createChallengesSlice = (set, get) => ({
         const prompt = `Crie uma descrição curta e enigmática para o desafio "Quem sou eu?" sobre o compositor ${correctComposer.name}. A descrição deve ter de 2 a 3 frases, destacando uma característica única, uma obra famosa ou um fato curioso de sua vida, sem mencionar o nome. Deve ser um desafio para um estudante de música. Responda apenas com a descrição, em português do Brasil.`;
         
         try {
-            const response = await fetch(`${backendUrl}/api/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-            if (!response.ok) throw new Error("Falha ao comunicar com o servidor.");
-            const result = await response.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const result = await apiService.generateGeminiContent(prompt);
             const description = result.candidates[0]?.content?.parts[0]?.text;
 
             if(description){
@@ -241,9 +231,8 @@ export const createChallengesSlice = (set, get) => ({
         const prompt = `Aja como um historiador da música criando um desafio. Gere uma descrição de 2 a 3 frases sobre uma característica, obra, compositor ou instrumento marcante do período da "${periodName}". A descrição deve ser enigmática, sem mencionar o nome do período. O objetivo é que o jogador adivinhe o período. Responda apenas com a descrição, em português do Brasil.`;
     
         try {
-            const response = await fetch(`${backendUrl}/api/gemini`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
-            if (!response.ok) throw new Error("Falha ao comunicar com a IA.");
-            const result = await response.json();
+            // <-- MUDANÇA: Usa a função do serviço de API
+            const result = await apiService.generateGeminiContent(prompt);
             const description = result.candidates[0]?.content?.parts[0]?.text;
 
             if (description) {
