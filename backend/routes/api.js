@@ -4,8 +4,10 @@ const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const jwt = require('jsonwebtoken');
 
 const User = require('../models/User');
+const { protect } = require('../middleware/authMiddleware'); // Importa o middleware de proteção
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -21,186 +23,134 @@ const apiLimiter = rateLimit({
 
 router.use(apiLimiter);
 
-// Rota de Autenticação Atualizada
+// Rota de Autenticação: Gera um token JWT no login
 router.post('/auth/google', async (req, res) => {
-    const { token, profile } = req.body;
+    const { profile } = req.body;
 
     try {
-        let name, email, picture;
-
-        if (token) {
-            // Fluxo original: valida o ID token do Google
-            const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
-            const payload = ticket.getPayload();
-            name = payload.name;
-            email = payload.email;
-            picture = payload.picture;
-        } else if (profile) {
-            // Novo fluxo: usa o perfil obtido pelo frontend após login com access_token
-            name = profile.name;
-            email = profile.email;
-            picture = profile.picture;
-        } else {
-            return res.status(400).json({ error: "Nenhum token ou perfil fornecido." });
+        if (!profile || !profile.email) {
+            return res.status(400).json({ error: 'Perfil ou email do Google não fornecido.' });
         }
 
-        if (!email) {
-            return res.status(400).json({ error: "Email não encontrado no perfil." });
-        }
+        const { name, email, picture } = profile;
 
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email: email });
+
         if (!user) {
-            user = new User({
-                name,
-                email,
-                picture,
-                score: 0,
-                achievements: [],
-                stats: {
-                    quizzesCompleted: 0,
-                    correctAnswers: 0,
-                    incorrectAnswers: 0,
-                    periodsVisited: new Map(),
-                    favoritePeriod: 'Nenhum'
-                }
-            });
+            user = new User({ name, email, picture });
             await user.save();
         }
-        res.status(200).json(user);
+
+        // Criar o payload do token com o ID do usuário
+        const jwtPayload = {
+            id: user._id,
+            email: user.email,
+            name: user.name
+        };
+
+        // Assinar e gerar o token
+        const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET, { expiresIn: '7d' });
+        
+        // Retornar os dados do usuário e o token
+        res.status(200).json({ user, token: jwtToken });
+
     } catch (error) {
-        console.error("Erro na autenticação do Google:", error);
-        res.status(400).json({ error: "Falha na autenticação" });
+        console.error("Erro na autenticação:", error);
+        res.status(500).json({ error: 'Falha na autenticação com o Google' });
     }
 });
 
-// --- Rotas ---
-
-// Rota de Autenticação
-router.post('/auth/google',
-    body('token').isString().notEmpty(),
-    async (req, res) => {
-        try {
-            const ticket = await client.verifyIdToken({ idToken: req.body.token, audience: process.env.GOOGLE_CLIENT_ID });
-            const { name, email, picture } = ticket.getPayload();
-            let user = await User.findOne({ email });
-            if (!user) {
-                user = new User({
-                    name,
-                    email,
-                    picture,
-                    score: 0,
-                    achievements: [],
-                    stats: {
-                        quizzesCompleted: 0,
-                        correctAnswers: 0,
-                        incorrectAnswers: 0,
-                        periodsVisited: new Map(),
-                        favoritePeriod: 'Nenhum'
-                    }
-                });
-                await user.save();
-            }
-            res.status(200).json(user);
-        } catch (error) {
-            console.error("Erro na autenticação do Google:", error);
-            res.status(400).json({ error: "Falha na autenticação" });
-        }
+// Rota pública para obter o placar (leaderboard)
+router.get('/leaderboard', async (req, res) => {
+    try {
+        const topUsers = await User.find().sort({ score: -1 }).limit(10);
+        res.json(topUsers);
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao buscar o placar' });
     }
-);
+});
 
-// Rota de Pontuação
-router.post('/score',
-    body('email').isEmail().normalizeEmail(),
-    body('score').isNumeric(),
-    body('statsUpdate').isObject().optional(),
-    async (req, res) => {
-        const { email, score, statsUpdate } = req.body;
-        try {
-            const user = await User.findOne({ email });
-            if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+// Rota protegida para atualizar pontuação
+router.post('/score', protect, async (req, res) => {
+    const { score, statsUpdate } = req.body;
+    try {
+        // Usa req.user.id injetado pelo middleware 'protect' para segurança
+        const user = await User.findById(req.user.id);
 
-            user.score = score;
+        if (user) {
+            if (typeof score === 'number') {
+                user.score = score;
+            }
             if (statsUpdate) {
-                user.stats.quizzesCompleted = (user.stats.quizzesCompleted || 0) + (statsUpdate.quizzesCompleted || 0);
-                user.stats.correctAnswers = (user.stats.correctAnswers || 0) + (statsUpdate.correctAnswers || 0);
-                user.stats.incorrectAnswers = (user.stats.incorrectAnswers || 0) + (statsUpdate.incorrectAnswers || 0);
+                if (statsUpdate.correctAnswers) user.stats.correctAnswers = (user.stats.correctAnswers || 0) + statsUpdate.correctAnswers;
+                if (statsUpdate.incorrectAnswers) user.stats.incorrectAnswers = (user.stats.incorrectAnswers || 0) + statsUpdate.incorrectAnswers;
+                if (statsUpdate.quizzesCompleted) user.stats.quizzesCompleted = (user.stats.quizzesCompleted || 0) + statsUpdate.quizzesCompleted;
             }
             const updatedUser = await user.save();
             res.status(200).json(updatedUser);
-        } catch (error) {
-            res.status(500).json({ error: "Erro ao atualizar pontuação" });
+        } else {
+            res.status(404).json({ error: 'Usuário não encontrado' });
         }
-    }
-);
-
-// Rota de Conquistas
-router.post('/achievements',
-    body('email').isEmail().normalizeEmail(),
-    body('achievement').isObject(),
-    async (req, res) => {
-        const { email, achievement } = req.body;
-        try {
-            const user = await User.findOneAndUpdate(
-                { email, 'achievements.name': { $ne: achievement.name } },
-                { $push: { achievements: achievement } },
-                { new: true }
-            );
-            if (!user) return res.status(200).send("Usuário não encontrado ou conquista já existe.");
-            res.status(200).json(user);
-        } catch (error) {
-            res.status(500).json({ error: "Erro ao adicionar conquista" });
-        }
-    }
-);
-
-// Rota do Ranking
-router.get('/leaderboard', async (req, res) => {
-    try {
-        const topPlayers = await User.find().sort({ score: -1 }).limit(10);
-        res.status(200).json(topPlayers);
     } catch (error) {
-        res.status(500).json({ error: "Erro ao buscar o ranking" });
+        console.error("Erro ao atualizar pontuação:", error);
+        res.status(500).json({ error: 'Erro ao atualizar pontuação' });
     }
 });
 
-// Rota para a IA Generativa
+// Rota protegida para adicionar conquistas
+router.post('/achievements', protect, async (req, res) => {
+    const { achievement } = req.body;
+    try {
+        // Usa req.user.id injetado pelo middleware 'protect' para segurança
+        const user = await User.findByIdAndUpdate(
+            req.user.id,
+            { $addToSet: { achievements: achievement } }, // $addToSet previne duplicatas
+            { new: true }
+        );
+        if (user) {
+            res.status(200).json(user);
+        } else {
+            res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+    } catch (error) {
+        console.error("Erro ao adicionar conquista:", error);
+        res.status(500).json({ error: 'Erro ao adicionar conquista' });
+    }
+});
+
+// Rota de proxy para a API do Gemini
 router.post('/gemini',
-    body('prompt').isString().notEmpty(),
+    body('prompt').isString().notEmpty().withMessage('O prompt não pode estar vazio.'),
     async (req, res) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
 
+        const { prompt } = req.body;
         const maxRetries = 3;
-        const prompt = req.body.prompt;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                console.log(`Tentativa ${attempt} de chamar a API Gemini...`);
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 const result = await model.generateContent(prompt);
                 const response = result.response;
                 const text = await response.text();
                 
-                // Sucesso! Envia a resposta e sai do loop.
-                return res.status(200).json({ candidates: [{ content: { parts: [{ text: text }] } }] });
+                return res.status(200).json({ candidates: [{ content: { parts: [{ text }] } }] });
 
             } catch (error) {
-                console.error(`Erro na tentativa ${attempt}:`, error.message);
+                console.error(`Erro na API Gemini (tentativa ${attempt}):`, error.message);
 
-                // Se for um erro 503 (Service Unavailable) ou 429 (Too Many Requests) e ainda tivermos tentativas...
                 const isRetryable = error.status === 503 || error.status === 429;
                 
                 if (isRetryable && attempt < maxRetries) {
-                    // Espera exponencialmente antes de tentar novamente (1s, 2s, 4s)
-                    const delay = Math.pow(2, attempt - 1) * 1000;
-                    console.log(`Modelo sobrecarregado ou limite de taxa atingido. Tentando novamente em ${delay / 1000} segundos...`);
+                    const delay = Math.pow(2, attempt - 1) * 1000; // Backoff exponencial
+                    console.log(`Tentando novamente em ${delay / 1000} segundos...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else {
-                    // Se não for um erro recuperável ou se esgotaram as tentativas, envia o erro.
                     return res.status(error.status || 500).json({ 
-                        error: "Ocorreu um erro ao processar a sua solicitação com a IA após múltiplas tentativas.",
+                        error: "Ocorreu um erro ao processar a sua solicitação com a IA.",
                         details: error.message
                     });
                 }

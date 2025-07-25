@@ -2,47 +2,36 @@ import { create } from 'zustand';
 import { googleLogout } from '@react-oauth/google';
 import { musicHistoryData } from '../data/index.js';
 
-const backendUrl = 'http://localhost:5001';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
 
-// --- Constantes e Funções Auxiliares ---
-
+// --- Constantes e Funções Auxiliares (permanecem as mesmas) ---
 const ALL_ACHIEVEMENTS = {
     MESTRE_MEDIEVAL: { name: "Mestre Medieval", description: "Acerte 10 perguntas do período Medieval." },
     VIAJANTE_DO_TEMPO: { name: "Viajante do Tempo", description: "Visite todos os 5 períodos musicais." },
     POLIGLOTA_MUSICAL: { name: "Poliglota Musical", description: "Complete desafios em 3 períodos diferentes." }
 };
-
 const romanToDecimal = (roman) => {
     const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
     let result = 0;
     for (let i = 0; i < roman.length; i++) {
         const current = map[roman[i].toUpperCase()];
         const next = map[roman[i + 1]?.toUpperCase()];
-        if (next && current < next) {
-            result -= current;
-        } else {
-            result += current;
-        }
+        if (next && current < next) result -= current;
+        else result += current;
     }
     return result;
 };
-
 const getBirthYear = (lifespan) => {
     if (!lifespan) return Infinity;
     let match = lifespan.match(/\d{3,4}/);
-    if (match) {
-        return parseInt(match[0], 10);
-    }
+    if (match) return parseInt(match[0], 10);
     match = lifespan.match(/séc\.\s*([IVXLCDM]+)/i);
     if (match && match[1]) {
         const century = romanToDecimal(match[1]);
-        if (century > 0) {
-            return (century - 1) * 100 + 1;
-        }
+        if (century > 0) return (century - 1) * 100 + 1;
     }
     return Infinity;
 };
-
 const createQuestionPrompt = (composerName, periodName) => `Aja como um professor de história da música. Crie uma pergunta de múltipla escolha sobre a biografia ou uma obra importante do compositor ${composerName}, que pertence ao período da ${periodName}. A pergunta deve ser clara e direta. As opções devem ser variadas em conteúdo e estilo, mas todas relacionadas ao tema. O texto deve ser escrito em português do Brasil.
 
 Formato Exigido (use ;; como separador entre as opções):
@@ -74,6 +63,7 @@ export const useMusicAppStore = create((set, get) => ({
         isLoading: false,
     },
     currentUser: null,
+    authToken: null, // <-- MUDANÇA: Novo estado para armazenar o token JWT
     score: 0,
     leaderboard: [],
     achievements: [],
@@ -83,20 +73,26 @@ export const useMusicAppStore = create((set, get) => ({
     // --- AÇÕES ---
 
     initialize: async () => {
-        try {
-            const loggedInUser = localStorage.getItem('user');
-            if (loggedInUser) {
+        // <-- MUDANÇA: Lógica atualizada para carregar o token do localStorage
+        const token = localStorage.getItem('authToken');
+        const loggedInUser = localStorage.getItem('user');
+
+        if (token && loggedInUser) {
+            try {
                 const user = JSON.parse(loggedInUser);
                 set({
                     currentUser: user,
+                    authToken: token, // Define o token no estado
                     score: user.score || 0,
                     achievements: user.achievements || [],
                     stats: user.stats || {}
                 });
+            } catch (error) {
+                console.error("Falha ao carregar dados do localStorage:", error);
+                // Limpa dados possivelmente corrompidos
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
             }
-        } catch (error) {
-            console.error("Falha ao carregar utilizador do localStorage:", error);
-            localStorage.removeItem('user');
         }
 
         try {
@@ -136,13 +132,18 @@ export const useMusicAppStore = create((set, get) => ({
             });
             if (!backendResponse.ok) throw new Error('Falha na autenticação com o backend');
             
-            const userFromDb = await backendResponse.json();
-            localStorage.setItem('user', JSON.stringify(userFromDb));
+            // <-- MUDANÇA: A resposta do backend agora inclui 'user' e 'token'
+            const { user, token } = await backendResponse.json();
+            
+            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('authToken', token); // Armazena o token no localStorage
+
             set({
-                currentUser: userFromDb,
-                score: userFromDb.score,
-                achievements: userFromDb.achievements || [],
-                stats: userFromDb.stats || {}
+                currentUser: user,
+                authToken: token, // Armazena o token no estado
+                score: user.score,
+                achievements: user.achievements || [],
+                stats: user.stats || {}
             });
         } catch (error) {
             console.error("Erro no login:", error);
@@ -150,24 +151,31 @@ export const useMusicAppStore = create((set, get) => ({
     },
 
     logout: () => {
+        // <-- MUDANÇA: Limpa o token do estado e do localStorage
         googleLogout();
         localStorage.removeItem('user');
-        set({ currentUser: null, score: 0, achievements: [], stats: {} });
+        localStorage.removeItem('authToken');
+        set({ currentUser: null, authToken: null, score: 0, achievements: [], stats: {} });
     },
 
     checkAndAwardAchievement: async (achievement) => {
-        const { currentUser, achievements } = get();
+        const { currentUser, achievements, authToken } = get();
         if (currentUser && !achievements.find(a => a.name === achievement.name)) {
             try {
+                // <-- MUDANÇA: Adiciona o cabeçalho de autorização
                 const response = await fetch(`${backendUrl}/api/achievements`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: currentUser.email, achievement }),
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ achievement }),
                 });
                 if (response.ok) {
                     const updatedUser = await response.json();
                     if (updatedUser && updatedUser.achievements) {
                         set({ achievements: updatedUser.achievements, lastAchievement: achievement });
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
                     }
                 }
             } catch (error) {
@@ -178,7 +186,7 @@ export const useMusicAppStore = create((set, get) => ({
 
     handleCorrectAnswer: async (playCorrectSound) => {
         playCorrectSound();
-        const { currentUser, score, stats, selectedPeriodId, checkAndAwardAchievement } = get();
+        const { currentUser, score, stats, selectedPeriodId, checkAndAwardAchievement, authToken } = get();
         if (!currentUser) return;
 
         const newScore = score + 15;
@@ -196,15 +204,21 @@ export const useMusicAppStore = create((set, get) => ({
         set({ score: newScore, stats: newStats });
 
         try {
-            await fetch(`${backendUrl}/api/score`, {
+            // <-- MUDANÇA: Adiciona o cabeçalho de autorização
+            const response = await fetch(`${backendUrl}/api/score`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify({
-                    email: currentUser.email,
                     score: newScore,
                     statsUpdate: { correctAnswers: 1, quizzesCompleted: 1 }
                 }),
             });
+            const updatedUser = await response.json();
+            localStorage.setItem('user', JSON.stringify(updatedUser)); // Atualiza o usuário no localStorage
+
             const updatedLeaderboard = await (await fetch(`${backendUrl}/api/leaderboard`)).json();
             set({ leaderboard: updatedLeaderboard });
 
@@ -219,27 +233,33 @@ export const useMusicAppStore = create((set, get) => ({
 
     handleIncorrectAnswer: async (playIncorrectSound) => {
         playIncorrectSound();
-        const { currentUser, score, stats } = get();
+        const { currentUser, score, stats, authToken } = get();
         if (currentUser) {
             const incorrectCount = (stats.incorrectAnswers || 0) + 1;
             set({ stats: { ...stats, incorrectAnswers: incorrectCount } });
             try {
-                await fetch(`${backendUrl}/api/score`, {
+                // <-- MUDANÇA: Adiciona o cabeçalho de autorização
+                const response = await fetch(`${backendUrl}/api/score`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
                     body: JSON.stringify({
-                        email: currentUser.email,
                         score: score,
                         statsUpdate: { incorrectAnswers: 1 }
                     }),
                 });
+                const updatedUser = await response.json();
+                localStorage.setItem('user', JSON.stringify(updatedUser)); // Atualiza o usuário no localStorage
             } catch (error) {
                 console.error("Erro ao salvar estatísticas:", error);
             }
         }
     },
 
-    // --- AÇÕES DOS DESAFIOS ---
+    // --- O restante das funções de desafio (handleGenerateQuiz, etc.) permanecem as mesmas ---
+    // ... (o código restante do seu arquivo musicAppStore.js)
     handleGenerateQuiz: async (returnOnly = false) => {
         const stateUpdater = (newState) => returnOnly ? {} : set(prev => ({ quiz: { ...prev.quiz, ...newState } }));
         stateUpdater({ isLoading: true });

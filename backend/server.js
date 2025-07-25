@@ -23,7 +23,7 @@ mongoose.connect(process.env.DATABASE_URL)
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: "*", // Alterado para aceitar de qualquer origem, melhor para desenvolvimento em rede
         methods: ["GET", "POST"]
     }
 });
@@ -36,4 +36,7 @@ initializeSocketManager(io);
 initializeKahootManager(io);
 
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+const HOST = '0.0.0.0'; // <-- MUDANÇA: Define o host para aceitar conexões externas
+
+// MUDANÇA: Adiciona o HOST ao comando listen
+server.listen(PORT, HOST, () => console.log(`Servidor rodando em http://${HOST}:${PORT}`));
