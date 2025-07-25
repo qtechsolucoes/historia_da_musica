@@ -53,4 +53,3 @@ export const useMusicAppStore = create((set, get) => ({
 
 // Inicializa o estado do store (principalmente para carregar dados do usuário do localStorage)
 // Esta chamada permanece aqui para garantir que os dados sejam carregados assim que a aplicação iniciar.
-useMusicAppStore.getState().initialize();

@@ -1,5 +1,6 @@
+// src/store/slices/userSlice.js
+
 import { googleLogout } from '@react-oauth/google';
-// <-- MUDANÇA: Importa o nosso novo serviço de API
 import apiService from '../../services/api';
 
 export const createUserSlice = (set, get) => ({
@@ -31,17 +32,17 @@ export const createUserSlice = (set, get) => ({
         }
         
         try {
-            // <-- MUDANÇA: Usa a função do serviço de API
             const data = await apiService.getLeaderboard();
             set({ leaderboard: data });
         } catch (error) {
             console.error("Erro ao carregar o ranking:", error);
+            // <-- MUDANÇA: Aciona a notificação de erro
+            get().showNotification('Não foi possível carregar o ranking. Verifique sua conexão.');
         }
     },
 
     login: async (profile) => {
         try {
-            // <-- MUDANÇA: Usa a função do serviço de API
             const { user, token } = await apiService.loginUser(profile);
             
             localStorage.setItem('user', JSON.stringify(user));
@@ -56,7 +57,8 @@ export const createUserSlice = (set, get) => ({
             });
         } catch (error) {
             console.error("Erro no login:", error);
-            // Aqui você pode adicionar uma notificação de erro para o usuário
+            // <-- MUDANÇA: Aciona a notificação de erro
+            get().showNotification(`Falha no login: ${error.message}`);
         }
     },
 
@@ -71,15 +73,15 @@ export const createUserSlice = (set, get) => ({
         const { currentUser, achievements, setLastAchievement } = get();
         if (currentUser && !achievements.find(a => a.name === achievement.name)) {
             try {
-                // <-- MUDANÇA: Usa a função do serviço de API
                 const updatedUser = await apiService.addUserAchievement(achievement);
                 if (updatedUser && updatedUser.achievements) {
                     set({ achievements: updatedUser.achievements });
-                    setLastAchievement(achievement); // Chama a ação do uiSlice
+                    setLastAchievement(achievement);
                     localStorage.setItem('user', JSON.stringify(updatedUser));
                 }
             } catch (error) {
                 console.error("Erro ao salvar conquista:", error);
+                get().showNotification('Erro ao salvar sua nova conquista.');
             }
         }
     },
@@ -89,16 +91,15 @@ export const createUserSlice = (set, get) => ({
         if (!authToken) return;
 
         try {
-            // <-- MUDANÇA: Usa a função do serviço de API
             const updatedUser = await apiService.updateUserScoreAndStats(newScore, statsUpdate);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             
-            // Atualiza o placar após a pontuação
             const updatedLeaderboard = await apiService.getLeaderboard();
             set({ leaderboard: updatedLeaderboard });
 
         } catch (error) {
             console.error("Erro ao salvar pontuação no backend:", error);
+            get().showNotification('Não foi possível salvar sua pontuação.');
         }
     },
 });

@@ -5,8 +5,6 @@ import io from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu } from 'lucide-react';
 
-// Os únicos imports do store necessários aqui são para o modal e o toast,
-// que são renderizados no nível mais alto do layout.
 import { useMusicAppStore } from './store/musicAppStore';
 
 import MainContent from './components/MainContent';
@@ -19,13 +17,13 @@ import QuizLobby from './components/quiz/QuizLobby';
 import JoinQuiz from './components/quiz/JoinQuiz';
 import PlayerScreen from './components/quiz/PlayerScreen';
 import HostScreen from './components/quiz/HostScreen';
+import NotificationToast from './components/NotificationToast';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const backendUrl = 'http://localhost:5001';
+const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
 const socket = io(backendUrl);
 
 const AppLayout = () => {
-    // AppLayout agora só se preocupa com o estado do layout e com os elementos globais.
     const modalContent = useMusicAppStore((state) => state.modalContent);
     const lastAchievement = useMusicAppStore((state) => state.lastAchievement);
     const handleCloseModal = useMusicAppStore((state) => state.handleCloseModal);
@@ -34,7 +32,6 @@ const AppLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [hasInteracted, setHasInteracted] = useState(false);
     
-    // Os refs de áudio permanecem aqui, pois são um recurso global da página.
     const correctSoundRef = useRef(null);
     const incorrectSoundRef = useRef(null);
     const sounds = {
@@ -48,7 +45,6 @@ const AppLayout = () => {
             id="app-container"
             onClick={() => { if (!hasInteracted) setHasInteracted(true); }}
         >
-            {/* Note como o Sidebar agora recebe muito menos props */}
             <Sidebar
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
@@ -69,7 +65,6 @@ const AppLayout = () => {
                 </header>
 
                 <div className="flex-1 flex flex-col overflow-y-auto scrollbar-custom">
-                    {/* MainContent agora também recebe muito menos props */}
                     <MainContent socket={socket} sounds={sounds} />
                 </div>
             </div>
@@ -79,6 +74,7 @@ const AppLayout = () => {
                 achievement={lastAchievement} 
                 onDismiss={() => setLastAchievement(null)} 
             />
+            <NotificationToast />
             <audio ref={correctSoundRef} src="assets/audio/correct.mp3" preload="auto" />
             <audio ref={incorrectSoundRef} src="assets-incorrect.mp3" preload="auto" />
         </div>
@@ -87,6 +83,14 @@ const AppLayout = () => {
 
 export default function App() {
     const [isLoading, setIsLoading] = useState(true);
+    // <-- INÍCIO DA MUDANÇA
+    const initializeApp = useMusicAppStore((state) => state.initialize);
+
+    useEffect(() => {
+        // Esta função agora é chamada apenas uma vez quando o componente App é montado.
+        initializeApp();
+    }, [initializeApp]); // A dependência garante que o useEffect não seja executado desnecessariamente.
+    // <-- FIM DA MUDANÇA
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 3000);
