@@ -5,12 +5,12 @@ import LoadingSpinner from './LoadingSpinner';
 
 const modalLayouts = {
   composer: 'max-w-6xl h-[90vh]',
-  instrument: 'max-w-7xl',
-  work: 'max-w-5xl h-[95vh]', 
-  genre: 'max-w-6xl',
-  style: 'max-w-6xl',
-  ensemble: 'max-w-6xl',
-  default: 'max-w-4xl',
+  instrument: 'max-w-7xl h-[70vh]', // ALTURA ADICIONADA
+  work: 'max-w-5xl h-[95vh]',
+  genre: 'max-w-6xl h-[90vh]',      // ALTURA ADICIONADA
+  style: 'max-w-6xl h-[90vh]',      // ALTURA ADICIONADA
+  ensemble: 'max-w-6xl h-[90vh]',   // ALTURA ADICIONADA
+  default: 'max-w-4xl h-[90vh]',    // ALTURA ADICIONADA
 };
 
 const DetailModal = ({ content, onClose }) => {
@@ -196,34 +196,37 @@ const DetailModal = ({ content, onClose }) => {
                         </div>
                     </div>
                 );
-            case 'instrument':
-                return (
-                   <div className="flex flex-col lg:flex-row gap-8 items-stretch h-full">
-                       <div className="lg:w-3/5 flex flex-col overflow-y-auto scrollbar-custom pr-2">
-                           <div className="flex flex-col md:flex-row gap-6 items-start">
-                               {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
-                               <div className="flex-1 text-stone-300 leading-relaxed text-justify">
-                                   {(data.description || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">{p}</p>)}
-                               </div>
-                           </div>
-                       </div>
-                       
-                       {data.youtubeId && (
-                          <div className="w-full lg:w-2/5 flex flex-col">
-                              <div className="flex-grow w-full rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50 min-h-[250px] mt-4 lg:mt-0">
-                                  <iframe 
-                                      src={`https://www.youtube.com/embed/${data.youtubeId}`} 
-                                      title="YouTube video player" 
-                                      frameBorder="0" 
-                                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                                      allowFullScreen 
-                                      className="w-full h-full">
-                                  </iframe>
-                              </div>
-                          </div>
-                       )}
+case 'instrument':
+    return (
+       <div className="flex flex-col lg:flex-row gap-8 h-full">
+           {/* Coluna da Esquerda: Imagem e Descrição */}
+           <div className="lg:w-3/5 flex flex-col">
+               <div className="flex flex-col md:flex-row gap-6 items-start">
+                   {data.image && <img src={data.image} alt={`[Imagem de ${data.name}]`} className="w-full md:w-56 h-56 object-cover rounded-md shadow-lg border-2 border-amber-900/50 flex-shrink-0"/>}
+                   <div className="flex-1 text-stone-300 leading-relaxed text-justify overflow-y-auto scrollbar-custom pr-2 max-h-[calc(90vh-150px)] md:max-h-full">
+                       {(data.description || '').split('\n\n').map((p, i) => <p key={i} className="mb-2 last:mb-0">{p}</p>)}
+                   </div>
+               </div>
+           </div>
+           
+           {/* Coluna da Direita: Vídeo do YouTube */}
+           {data.youtubeId && (
+              <div className="w-full lg:w-2/5 flex flex-col flex-grow">
+                  {/* Este contêiner agora tem h-full para ocupar todo o espaço vertical */}
+                  <div className="w-full h-full rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
+                      <iframe 
+                          src={`https://www.youtube.com/embed/${data.youtubeId}`}
+                          title="YouTube video player" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                          allowFullScreen 
+                          className="w-full h-full">
+                      </iframe>
                   </div>
-                );
+              </div>
+           )}
+      </div>
+    );
 
             case 'ensemble':
             case 'genre':
@@ -244,7 +247,7 @@ const DetailModal = ({ content, onClose }) => {
                         
                         <div className="w-full flex-grow mb-4 rounded-lg overflow-hidden shadow-lg border-2 border-amber-900/50">
                             <iframe 
-                                src={`https://www.youtube.com/embed/${data.youtubeId}`} 
+                                src={`https://www.youtube.com/embed/${data.youtubeId}`}
                                 title="YouTube video player" 
                                 frameBorder="0" 
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
