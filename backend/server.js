@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require("socket.io");
-
+require('./redisClient');
 const apiRoutes = require('./routes/api');
 const kahootApiRoutes = require('./routes/kahootApi');
 const adminApiRoutes = require('./routes/adminApi');
